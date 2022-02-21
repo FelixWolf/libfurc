@@ -37,6 +37,7 @@ class Account:
             "v": "libfurc"
         })
         
+        #TODO: Make this async
         req = urllib.request.Request(
             loginServer or cls.loginServer,
             data = data.encode(),
@@ -83,6 +84,7 @@ class Account:
                 for costume in character:
                     if costume.tag == "costume":
                         char.addCostume(Costume(
+                            character = char,
                             id = int(costume.attrib["id"]),
                             name = costume.attrib["name"],
                             ordinal = int(costume.attrib["ordinal"]),

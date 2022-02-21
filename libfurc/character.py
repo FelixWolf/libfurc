@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 class Costume:
-    def __init__(self, id, name, ordinal = None, colors = None,
+    def __init__(self, character, id, name, ordinal = None, colors = None,
                  lastPortrait = 0, lastScale = 100, lastGloam = 0,
                  lastSpecitag = 0, standard = 200, desc = ""):
+        self.character = character
         self.id = id
         self.name = name
         self.ordinal = ordinal
