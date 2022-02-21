@@ -82,6 +82,8 @@ class Client(PacketHooks, Commands):
     async def disconnect(self):
         writer.close()
         await writer.wait_closed()
+        self.reader = None
+        self.writer = None
     
     async def send(self, data):
         if self.connected():
