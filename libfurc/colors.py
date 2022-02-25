@@ -13,3 +13,15 @@ class Colors:
         self = cls()
         
         return self
+    
+    @classmethod
+    def fromStream(cls, data):
+        version = data.read(1)[0]
+        self = cls()
+        if version == 116:
+            code = data.read(10)
+            if len(code) != 10:
+                raise ValueError("Invalid color code!")
+        else:
+            raise ValueError("Invalid color code!")
+        return self
