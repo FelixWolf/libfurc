@@ -1,6 +1,6 @@
 from setuptools import setup
 
-version = "0.0.0"
+version = "0.1.0"
 
 long_description = None
 with open("readme.md", "r") as f:
@@ -16,7 +16,7 @@ setup(
     author="Félix",
     author_email="felix.wolfz@gmail.com",
     classifiers=[
-        "Development Status :: 1 - Planning",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers", 
         "Natural Language :: English",
         "Operating System :: OS Independent",
