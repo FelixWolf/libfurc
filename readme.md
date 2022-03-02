@@ -5,11 +5,18 @@ A python library for handling Furcadia formats, compiling and running(vm) Dragon
 
 Features
 ========
-* Basic login to charon
+* Account picker
+* Account based log in
+* INI based log in
+* Async client
+* Support for most server to client messages
+* Some support for client to server messages
 
 Planned Features
 ================
 
+* More support for client to server messages
+* Documentation
 * Dream support
 * FSH support
 * FBJ support
