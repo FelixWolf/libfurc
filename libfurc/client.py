@@ -35,10 +35,6 @@ class PacketHooks(DefaultPacketHandler):
                 except ValueError:
                     pass
     
-    #Meta messages
-    async def message_motd(self, message):
-        await self.fire("MOTD", message)
-    
     #Messages
     #" " - Remove avatar by ID
     async def message_1(self, opcode, data):
