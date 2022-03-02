@@ -1,58 +1,11 @@
 #!/usr/bin/env python3 
 import asyncio
 from . import base
+from .furcbuffer import FurcBuffer
 from .account import Character
 from .colors import Colors
 
 LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
-
-class FurcMessageReader:
-    def __init__(self, buffer):
-        self.buffer = buffer
-        self.offset = 0
-
-    @property
-    def eof(self):
-        return self.offset >= len(self.buffer)
-    
-    @property
-    def remaining(self):
-        return len(self.buffer) - self.offset
-    
-    def read(self, l = None):
-        if l == None:
-            v = self.buffer[self.offset:]
-            self.offset = len(self.buffer)
-        else:
-            v = self.buffer[self.offset:self.offset+l]
-            self.offset += l
-        return v
-    
-    def readUntil(self, seperator = b" "):
-        data = b""
-        while not self.eof:
-            c = self.read(1)
-            if c == seperator:
-                return data
-        return data
-    
-    def read95(self, l):
-        return base.b95decode(self.read(l))
-    
-    def read220(self, l):
-        return base.b220decode(self.read(l))
-    
-    def read95Bytes(self, l=1):
-        return self.read(base.b95decode(self.read(l)))
-    
-    def read95String(self, l=1):
-        return self.read95Bytes(l).decode()
-    
-    def read220Bytes(self, l=1):
-        return self.read(base.b220decode(self.read(l)))
-    
-    def read220String(self, l=1):
-        return self.read220Bytes(l).decode()
 
 #Incoming message definitions
 class DefaultPacketHandler:
@@ -61,7 +14,9 @@ class DefaultPacketHandler:
 
 class PacketHooks(DefaultPacketHandler):
     def __init__(self, useLookups = False):
-        self.listeners = {}
+        self.listeners = {
+            "*": []
+        }
         self.lookup = None
         if useLookups:
             self.generateLookups()
@@ -88,7 +43,7 @@ class PacketHooks(DefaultPacketHandler):
     #" " - Remove avatar by ID
     async def message_1(self, opcode, data):
         avatars = []
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         while msg.remaining >= 4:
             avatars.append(msg.read220(4))
         await self.fire("RemoveAvatarID", avatars)
@@ -112,7 +67,7 @@ class PacketHooks(DefaultPacketHandler):
     #")" - Remove avatar at location
     async def message_9(self, opcode, data):
         avatars = []
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         while msg.remaining >= 8:
             avatars.append((msg.read220(4), msg.read220(4)))
         await self.fire("RemoveAvatarLocation", avatars)
@@ -120,7 +75,7 @@ class PacketHooks(DefaultPacketHandler):
     #"/" - Animate avatar
     async def message_15(self, opcode, data):
         avatars = {}
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         while msg.remaining >= 16:
             avatars[msg.read220(4)] = {
                 "pos": (msg.read220(4), msg.read220(4)),
@@ -130,7 +85,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"0" - Sync dream variables
     async def message_16(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         start = msg.read95(2)
         offset = 0
         variables = {}
@@ -146,59 +101,59 @@ class PacketHooks(DefaultPacketHandler):
     
     #"1" - Set floors
     async def message_17(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
                 "pos": (msg.read95(2), msg.read95(2)),
                 "id": msg.read95(2)
             })
-        self.fire("SetFloor", result)
+        await self.fire("SetFloor", result)
     
     #"2" - Set floors
     async def message_18(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
                 "pos": (msg.read95(2), msg.read95(2)),
                 "id": msg.read95(2)
             })
-        self.fire("SetWall", result)
+        await self.fire("SetWall", result)
     
     #"3" - Set all DS variables
     async def message_19(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         vals = []
         while msg.remaining >= 3:
             vals.append(msg.read95(3))
-        self.fire("SetVariables", result)
+        await self.fire("SetVariables", result)
     
     #"4" - Set region
     async def message_20(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
                 "pos": (msg.read95(2), msg.read95(2)),
                 "id": msg.read95(2)
             })
-        self.fire("SetRegion", result)
+        await self.fire("SetRegion", result)
     
     #"5" - Set effect
     async def message_21(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
                 "pos": (msg.read95(2), msg.read95(2)),
                 "id": msg.read95(2)
             })
-        self.fire("SetEffect", result)
+        await self.fire("SetEffect", result)
     
     #"6" - DS event triggered by player
     async def message_22(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         from_x = msg.read95(2)
         from_y = msg.read95(2)
         to_x = msg.read95(2)
@@ -214,11 +169,11 @@ class PacketHooks(DefaultPacketHandler):
             "line": line,
             "triggerer": (trig_x, trig_y)
         }
-        self.fire("DSEvent", True, result)
+        await self.fire("DSEvent", True, result)
     
     #"7" - DS event triggered by other
     async def message_23(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         from_x = msg.read95(2)
         from_y = msg.read95(2)
         to_x = msg.read95(2)
@@ -234,12 +189,12 @@ class PacketHooks(DefaultPacketHandler):
             "line": line,
             "triggerer": (trig_x, trig_y)
         }
-        self.fire("DSEvent", False, result)
+        await self.fire("DSEvent", False, result)
     
     #"8" - DS event addon
     async def message_24(self, opcode, data):
-        msg = FurcMessageReader(data)
-        self.fire("DSEventAddon", {
+        msg = FurcBuffer(data)
+        await self.fire("DSEventAddon", {
             "moveFlag": msg.read95(1),
             "randSeed": msg.read95(5),
             "saidNum": msg.read95(3),
@@ -263,7 +218,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"9" - Region flags
     async def message_25(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         regions = {}
         while msg.remaining >= 8:
             index = msg.read95(3)
@@ -272,15 +227,15 @@ class PacketHooks(DefaultPacketHandler):
             for i in range(count):
                 regions[0xFFFF & i] = flag
                 
-        self.fire("RegionFlags", regions)
+        await self.fire("RegionFlags", regions)
     
     #";" - Load map
     async def message_27(self, opcode, data):
-        self.fire("DSEventAddon", data.decode())
+        await self.fire("DSEventAddon", data.decode())
     
     #"<" - Spawn avatar
     async def message_28(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
@@ -293,79 +248,79 @@ class PacketHooks(DefaultPacketHandler):
                 "afk": msg.read220(2),
                 "scale": msg.read220(2)
             })
-        self.fire("SpawnAvatar", result)
+        await self.fire("SpawnAvatar", result)
     
     #"=" - Resume drawing
     async def message_29(self, opcode, data):
-        self.fire("Suspend", False)
+        await self.fire("Suspend", False)
     
     #">" - Spawn object
     async def message_30(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 20:
             result.append({
                 "pos": (msg.read95(2), msg.read95(2)),
                 "id": msg.read95(2)
             })
-        self.fire("SetObject", result)
+        await self.fire("SetObject", result)
     
     #"@" - Move camera
     async def message_32(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         result = {
             "to": (msg.read95(2), msg.read95(2))
         }
         while msg.remaining >= 2:
             result["from"] = (msg.read95(2), msg.read95(2))
-        self.fire("MoveCamera", result)
+        await self.fire("MoveCamera", result)
     
     #"A" - Move avatars
     async def message_33(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 10:
             avatars[msg.read220(4)] = {
                 "pos": (msg.read220(4), msg.read220(4)),
                 "patch": msg.read220(4)
             }
-        self.fire("MoveAvatar", avatars)
+        await self.fire("MoveAvatar", avatars)
     
     #"B" - Set avatar colors
     async def message_34(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 16:
             avatars[msg.read220(4)] = {
                 "patch": msg.read220(4),
                 "colors":   Colors.fromStream(msg),
             }
-        self.fire("SetAvatarColors", avatars)
+        await self.fire("SetAvatarColors", avatars)
     
     #"C" - Hide avatar at position
     async def message_35(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 8:
             avatars[msg.read220(4)] = {
                 "pos": (msg.read220(4), msg.read220(4)),
                 "patch": msg.read220(4)
             }
-        self.fire("HideAvatar", avatars)
+        await self.fire("HideAvatar", avatars)
     
     #"D" - Set triggering furre
     #WARNING: Probably deprecated
     async def message_36(self, opcode, data):
-        msg = FurcMessageReader(data)
-        self.fire("DSTriggerer", msg.read220(4))
+        msg = FurcBuffer(data)
+        await self.fire("DSTriggerer", msg.read220(4))
     
     #"[" - Server authenticate
     async def message_59(self, opcode, data):
-        self.fire("Disconnect", data.decode())
+        await self.fire("Disconnect", data.decode())
     
     #"\" - Server authenticate
     async def message_60(self, opcode, data):
-        self.fire("Authenticate", data.decode())
+        await self.fire("Authenticate", data.decode())
     
     #"]" - Protocol extension
     async def message_61(self, opcode, data):
@@ -387,11 +342,16 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]#" - Dialog
     async def message_61_3(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
+        diagID = msg.readUntil().decode()
+        if diagID == "xxxx":
+            diagID = -1
+        else:
+            diagID = int(diagID)
         await self.fire("Dialog",
-            int(msg.readUntil().decode()), #Dialog ID
+            diagID, #Dialog ID
             int(msg.readUntil().decode()), #Dialog Type
-            msg.read()
+            msg.read().decode()
         )
     
     #"]$" - Open URL
@@ -407,10 +367,10 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]&" - Set portrait
     async def message_61_6(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("Portrait",
             int(msg.readUntil().decode()), #Portrait ID
-            msg.read() #Portrait name
+            msg.read().decode() #Portrait name
         )
     
     #"]*" - Show URL
@@ -438,7 +398,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]C" - Bookmark Dream
     async def message_61_35(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("Bookmark",
             data[0] == 49, #0 = Temporary, 1 = User request
             data[1:].decode() #FDL
@@ -467,14 +427,14 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]H" - Offset avatar
     async def message_61_39(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 8:
             avatars[msg.read220(4)] = {
                 "userID": msg.read220(4),
                 "pos": (msg.read220(4), msg.read220(4)),
             }
-        self.fire("OffsetAvatar", avatars)
+        await self.fire("OffsetAvatar", avatars)
     
     #"]I" - Particle Effect
     async def message_61_41(self, opcode, data):
@@ -510,7 +470,7 @@ class PacketHooks(DefaultPacketHandler):
     #"]W" - Region settings
     #FIXME: This has changed!
     async def message_61_55(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("RegionSettings", {
             "outdoor": {
                 "object": msg.read220(2),
@@ -537,11 +497,11 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]_" - Kitterdust
     async def message_61_39(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 5:
             avatars[msg.read220(4)] = msg.read220(1)
-        self.fire("KitterDust", avatars)
+        await self.fire("KitterDust", avatars)
     
     #"]a" - Waiting for dream
     #FIXME: Confirm this is correct
@@ -555,7 +515,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]f" - Look
     async def message_61_70(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("Look", Colors.fromStream(msg), msg.read().decode())
     
     #"]j" - Look
@@ -564,30 +524,30 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]m" - Marco
     async def message_61_77(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Marco", msg.read())
     
     #"]o" - Dream owner name
     async def message_61_79(self, opcode, data):
-        msg = FurcMessageReader(data)
-        await self.fire("DreamOwner", msg.read())
+        msg = FurcBuffer(data)
+        await self.fire("DreamOwner", msg.read().decode())
     
     #"]q" - Load dream with custom patches
     async def message_61_81(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Dream", True, msg.readUntil(), msg.readUntil())
     
     #"]r" - Load dream with default patches
     async def message_61_82(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Dream", False, msg.readUntil(), msg.readUntil())
     
     #"]s" - Place text at location
     async def message_61_83(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("Text",
             (msg.read95(2), msg.read95(2)),
             int(msg.readUntil()), #Type?
@@ -598,7 +558,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]t" - Clear text at location
     async def message_61_84(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("ClearText", (msg.read95(2), msg.read95(2)))
     
     #"]u" - Waiting for dream
@@ -608,7 +568,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]v" - Effect
     async def message_61_86(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("Effect",
             msg.read(1).decode(), #Type
             (msg.read95(2),msg.read95(2)) #Location
@@ -636,28 +596,25 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]}" - Set own colors
     async def message_61_93(self, opcode, data):
-        msg = FurcMessageReader(data)
+        msg = FurcBuffer(data)
         await self.fire("SetColors", Colors.fromStream(msg))
     
     #"^" - Item in hand
     async def message_62(self, opcode, data):
-        self.fire("ButlerPaws", base.b95decode(data[0:2]))
+        await self.fire("ButlerPaws", base.b95decode(data[0:2]))
     
     #"~" - Suspend drawing
     async def message_94(self, opcode, data):
-        self.fire("Suspend", True)
+        await self.fire("Suspend", True)
     
     #Hook definitions
     async def fire(self, name, *args, **kwargs):
-        if name not in self.listeners:
-            return False
+        if name in self.listeners:
+            for callback in self.listeners[name]:
+                await callback(*args, **kwargs)
         
-        for callback in self.listeners[name]:
-            await callback(*args, **kwargs)
-        
-        if "*" in self.listeners:
-            for callback in self.listeners["*"]:
-                await callback(name, *args, **kwargs)
+        for callback in self.listeners["*"]:
+            await callback(name, *args, **kwargs)
         
         return True
     
@@ -683,11 +640,10 @@ class Commands:
                 character.password
             ))
         elif character.type == character.TYPE_ACCOUNT:
-            return self.command("account {} {} {} {}".format(
+            return self.command("account {} {} {}".format(
                 character.account.username,
                 character.name,
-                character.account.password,
-                "" #TODO: Machine ID goes here
+                character.account.password
             ))
     
     def move(self, direction):
@@ -723,7 +679,7 @@ class Client(PacketHooks, Commands):
         self.server = server or LIVE_SERVER
     
     #Basic networking stuff
-    async def connect(self, server = None, loop = None):
+    async def connect(self, server = None, loop = None, timeout = 5):
         if self.connected:
             await self.disconnect()
         
@@ -733,7 +689,26 @@ class Client(PacketHooks, Commands):
         self.reader, self.writer = await asyncio.open_connection(
             server[0], server[1])
         
-        await self.readLoop()
+        motd = ""
+        while self.connected:
+            try:
+                data = await asyncio.wait_for(self.reader.readline(), timeout)
+            except asyncio.TimeoutError:
+                data = None
+                pass
+            
+            if not data: #None = Disconnected
+                break
+            
+            if data[-1] != 10: #No EOL means incomplete stream + disconnected
+                break
+            
+            if data == b"Dragonroar\n":
+                return motd
+            else:
+                motd += data.decode()
+        
+        return None
     
     async def disconnect(self):
         writer.close()
@@ -742,7 +717,6 @@ class Client(PacketHooks, Commands):
         self.writer = None
     
     async def send(self, data):
-        print("<", data)
         if self.connected:
             self.writer.write(data)
             await self.writer.drain()
@@ -761,32 +735,7 @@ class Client(PacketHooks, Commands):
         return True
     
     #Actual read loop, it is designed to be it's own task
-    async def readLoop(self):
-        motd = ""
-        #Wait for MOTD
-        #TODO: Add timeout
-        #TODO: Move this to connect() and return MOTD from there
-        while self.connected:
-            data = await self.reader.readline()
-            
-            if not data: #None = Disconnected
-                break
-            
-            if data[-1] != 10: #No EOL means incomplete stream + disconnected
-                break
-            
-            if data == b"Dragonroar\n":
-                await getattr(
-                    self,
-                    "message_motd",
-                    self.message_unhandled
-                )(motd)
-                motd = None
-                break
-            else:
-                motd += data.decode()
-        
-        #Connected loop
+    async def run(self):
         while self.connected:
             data = await self.reader.readline()
             

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from .character import Costume
 from .colors import Colors
+from .exceptions import LoginError
 import datetime
 import urllib.request
 import urllib.parse
@@ -101,9 +101,6 @@ class Character:
         if self.costumes:
             self.costumes.append(costume)
 
-class LoginError(Exception):
-    pass
-
 class Account:
     loginServer = "https://charon.furcadia.com/accounts/clogin.php"
     def __init__(self, username, password, id, email = None):
@@ -153,7 +150,7 @@ class Account:
                         break
                 
                 if account == None:
-                    raise LoginError("No account element located!")
+                    raise exceptions.LoginError("No account element located!")
                 
                 self = cls(
                     username,
@@ -204,6 +201,6 @@ class Account:
                     self.addCharacter(char)
             
         except urllib.error.HTTPError as e:
-            raise LoginError(e.read()) from None
+            raise exceptions.LoginError(e.read()) from None
         
         return self
