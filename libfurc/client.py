@@ -457,7 +457,7 @@ class PacketHooks(DefaultPacketHandler):
             
             Base220(1) version
             Base220(4) flags
-            while(remaining > 0)
+            while(remaining > 5)
                 Base220(4) unk5
                 Base220(1) unk6 (? Looks like 1)
                 if(unk6 == 1)
@@ -470,7 +470,7 @@ class PacketHooks(DefaultPacketHandler):
                 char(4) "FvXn"
                 uint8 version
                 uint32 flags
-                while(remaining > 0)
+                while(remaining > 5)
                     uint16 subversion (? Looks like 27937)
                     uint32 unk1
                     uint8 subversion (? Looks like 1)
@@ -491,7 +491,7 @@ class PacketHooks(DefaultPacketHandler):
     #TODO: Implement
     async def message_61_45(self, opcode, data):
         """Format:
-            while(remaining)
+            while(remaining > 8)
                 Base220(1) version
                 Base220(1) unk1
                 Base220(1) unk2
@@ -526,7 +526,7 @@ class PacketHooks(DefaultPacketHandler):
             Base220(2) unk
             Base220(2) unk
             Base220(2) unk
-            if(remaining > 30)
+            if(remaining > 3)
                 Base220(1) length
                 for(i = 0; i < length; i++)
                     Base220(2) unk
