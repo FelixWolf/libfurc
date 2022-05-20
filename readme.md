@@ -25,3 +25,9 @@ Planned Features
 * PCX support (Although not furcadia specific, it'll be implemented)
 * DragonSpeak Compiler
 * DragonSpeak VM
+
+Disclaimer
+==========
+This project is not sponsered, endorsed, or officially recognized in any way by Dragon Eye's Production or Catnip Studios. <br/>
+This is a unofficial fan project. <br/>
+Furcadia is a trademark of Dragon's Eye Productions.
