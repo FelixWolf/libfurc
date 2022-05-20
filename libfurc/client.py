@@ -387,7 +387,7 @@ class PacketHooks(DefaultPacketHandler):
         )
     
     #"]*" - Show URL
-    async def message_61_4(self, opcode, data):
+    async def message_61_10(self, opcode, data):
         await self.fire("OpenURL", True, data)
     
     #"]-" - Prefix text
@@ -402,8 +402,41 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]A" - Guild tag related?
     #FIXME: Figure out how this works
-    async def message_61_34(self, opcode, data):
+    async def message_61_33(self, opcode, data):
         await self.fire("GuildTagA", data)
+    
+    #"]?" - Unknown, something related to pounce
+    #FIXME: Figure out wtf this is
+    async def message_61_31(self, opcode, data):
+        """Seen values:
+            char[1] "I" - Clear(?) and jump to func1
+            char[1] "A" - jump to func1
+            char[1] "S" - jump to func2
+            char[1] "o" - jump to func3
+            
+            func1:
+                Base220(4) unk1
+                Base220(4) unk2
+                char[1] unk3 #flag?
+                Base220(4) unk4 #Time?
+                Base220(4) unk5 #Time?
+                Base220(4) unk6 #Time?
+                Base220(1) unk7
+                Base220(1) unk8
+            
+            func2:
+                while(remaining > 3)
+                    Base220(4) unk1
+                    Base220(4) unk2
+                    char[1] unk3
+                    Base220(4) unk4
+                    Base220(4) unk5
+            
+            func3:
+                Base220(4) unk1
+                char[1] flag - "+" or "-"
+        """
+        #await self.fire("SetUserID", int(data.decode()))
     
     #"]B" - Set user ID
     #FIXME: This might be incorrect
@@ -500,9 +533,18 @@ class PacketHooks(DefaultPacketHandler):
         """
         await self.fire("DynamicAvatars", data)
     
+    #"]O" - Gloam
+    async def message_61_47(self, opcode, data):
+        """Format:
+            while(remaining)
+                Base220(4) UID
+                Base220(2) Gloam data
+        """
+        await self.fire("Gloam", data)
+    
     #"]P" - Guild tag related?
     #FIXME: Figure out how this works
-    async def message_61_34(self, opcode, data):
+    async def message_61_48(self, opcode, data):
         await self.fire("GuildTagB", data)
     
     #"]W" - Region settings
@@ -557,7 +599,7 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("Login", False)
     
     #"]_" - Kitterdust
-    async def message_61_39(self, opcode, data):
+    async def message_61_63(self, opcode, data):
         msg = FurcBuffer(data)
         avatars = {}
         while msg.remaining >= 5:
