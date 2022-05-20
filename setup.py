@@ -1,4 +1,4 @@
-from setuptools import setup
+from distutils.core import setup
 
 version = "0.1.0"
 
@@ -15,6 +15,7 @@ setup(
     url="https://github.com/FelixWolf/libFurc",
     author="Félix",
     author_email="felix.wolfz@gmail.com",
+    packages=["libfurc"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers", 

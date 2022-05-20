@@ -33,19 +33,31 @@ class FurcBuffer:
         return data
     
     def read95(self, l = 1):
-        return base.b95decode(self.read(l))
+        try:
+            return base.b95decode(self.read(l))
+        except ValueError as e:
+            raise ValueError("Failed to decode message {} at {}".format(self.buffer, self.offset - l))
     
     def read220(self, l = 1):
-        return base.b220decode(self.read(l))
+        try:
+            return base.b220decode(self.read(l))
+        except ValueError as e:
+            raise ValueError("Failed to decode message {} at {}".format(self.buffer, self.offset - l))
     
     def read95Bytes(self, l = 1):
-        return self.read(base.b95decode(self.read(l)))
+        try:
+            return self.read(base.b95decode(self.read(l)))
+        except ValueError as e:
+            raise ValueError("Failed to decode message {} at {}".format(self.buffer, self.offset - l))
     
     def read95String(self, l = 1):
         return self.read95Bytes(l).decode()
     
     def read220Bytes(self, l = 1):
-        return self.read(base.b220decode(self.read(l)))
+        try:
+            return self.read(base.b220decode(self.read(l)))
+        except ValueError as e:
+            raise ValueError("Failed to decode message {} at {}".format(self.buffer, self.offset - l))
     
     def read220String(self, l = 1):
         return self.read220Bytes(l).decode()

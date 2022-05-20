@@ -37,6 +37,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #Messages
     #" " - Remove avatar by ID
+    #FIXME: Unconfirmed
     async def message_1(self, opcode, data):
         avatars = []
         msg = FurcBuffer(data)
@@ -60,18 +61,25 @@ class PacketHooks(DefaultPacketHandler):
     async def message_8(self, opcode, data):
         await self.fire("Message", data)
     
-    #")" - Remove avatar at location
+    #")" - Remove avatar
     async def message_9(self, opcode, data):
         avatars = []
         msg = FurcBuffer(data)
-        while msg.remaining >= 8:
-            avatars.append((msg.read220(4), msg.read220(4)))
-        await self.fire("RemoveAvatarLocation", avatars)
+        msg.read220(4)
+        await self.fire("RemoveAvatar", avatars)
     
     #"/" - Animate avatar
+    #FIXME: New format
     async def message_15(self, opcode, data):
         avatars = {}
         msg = FurcBuffer(data)
+        """New format:
+            Base220(4) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(1) unk
+            Base220(1) unk
+        """
         while msg.remaining >= 16:
             avatars[msg.read220(4)] = {
                 "pos": (msg.read220(4), msg.read220(4)),
@@ -82,27 +90,29 @@ class PacketHooks(DefaultPacketHandler):
     #"0" - Sync dream variables
     async def message_16(self, opcode, data):
         msg = FurcBuffer(data)
-        start = msg.read95(2)
-        offset = 0
         variables = {}
-        remaining = 0
-        while msg.remaining >= 6:
-            x, y = msg.read95(3), msg.read95(3)
-            if x == 0x4000:
-                remaining = y
-            else:
-                variables[start+offset] = (x, y)
-            offset += 1
+        while msg.remaining >= 2:
+            offset = msg.read95(2)
+            while msg.remaining >= 6:
+                val = msg.read95(3)
+                if x != 0x4000:
+                    variables[offset] = val
+                    offset += 3
+                else:
+                    repeats = msg.read95(3) + 1
+                    for i in range(repeats):
+                        variables[offset] = v
+                        offset += 3
         await self.fire("UpdateVariables", variables, remaining)
     
     #"1" - Set floors
     async def message_17(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
-        while msg.remaining >= 20:
+        while msg.remaining >= 6:
             result.append({
-                "pos": (msg.read95(2), msg.read95(2)),
-                "id": msg.read95(2)
+                "pos": (msg.read220(2), msg.read220(2)),
+                "id": msg.read220(2)
             })
         await self.fire("SetFloor", result)
     
@@ -110,10 +120,10 @@ class PacketHooks(DefaultPacketHandler):
     async def message_18(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
-        while msg.remaining >= 20:
+        while msg.remaining >= 6:
             result.append({
-                "pos": (msg.read95(2), msg.read95(2)),
-                "id": msg.read95(2)
+                "pos": (msg.read220(2), msg.read220(2)),
+                "id": msg.read220(2)
             })
         await self.fire("SetWall", result)
     
@@ -123,16 +133,16 @@ class PacketHooks(DefaultPacketHandler):
         vals = []
         while msg.remaining >= 3:
             vals.append(msg.read95(3))
-        await self.fire("SetVariables", result)
+        await self.fire("SetVariables", vals)
     
     #"4" - Set region
     async def message_20(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
-        while msg.remaining >= 20:
+        while msg.remaining >= 6:
             result.append({
-                "pos": (msg.read95(2), msg.read95(2)),
-                "id": msg.read95(2)
+                "pos": (msg.read220(2), msg.read220(2)),
+                "id": msg.read220(2)
             })
         await self.fire("SetRegion", result)
     
@@ -140,14 +150,15 @@ class PacketHooks(DefaultPacketHandler):
     async def message_21(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
-        while msg.remaining >= 20:
+        while msg.remaining >= 6:
             result.append({
-                "pos": (msg.read95(2), msg.read95(2)),
-                "id": msg.read95(2)
+                "pos": (msg.read220(2), msg.read220(2)),
+                "id": msg.read220(2)
             })
         await self.fire("SetEffect", result)
     
     #"6" - DS event triggered by player
+    #FIXME: Verify
     async def message_22(self, opcode, data):
         msg = FurcBuffer(data)
         from_x = msg.read95(2)
@@ -168,6 +179,7 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("DSEvent", True, result)
     
     #"7" - DS event triggered by other
+    #FIXME: Verify
     async def message_23(self, opcode, data):
         msg = FurcBuffer(data)
         from_x = msg.read95(2)
@@ -217,9 +229,9 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         regions = {}
         while msg.remaining >= 8:
-            index = msg.read95(3)
-            flag = msg.read95(3)
-            count = msg.read95(2)
+            index = msg.read220(3)
+            flag = msg.read220(3)
+            count = msg.read220(2)
             for i in range(count):
                 regions[0xFFFF & i] = flag
                 
@@ -230,9 +242,21 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("DSEventAddon", data.decode())
     
     #"<" - Spawn avatar
+    #FIXME: New format
     async def message_28(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
+        """New format:
+            Base220(4)
+            Base220(2)
+            Base220(1)
+            Base220(1)
+            Base220(1)
+            ColorCode
+            Base220(1)
+            Base220(4)
+            Base220(1)
+        """
         while msg.remaining >= 20:
             result.append({
                 "userID": msg.read220(4),
@@ -254,55 +278,48 @@ class PacketHooks(DefaultPacketHandler):
     async def message_30(self, opcode, data):
         msg = FurcBuffer(data)
         result = []
-        while msg.remaining >= 20:
+        while msg.remaining >= 6:
             result.append({
-                "pos": (msg.read95(2), msg.read95(2)),
-                "id": msg.read95(2)
+                "pos": (msg.read220(2), msg.read220(2)),
+                "id": msg.read220(2)
             })
         await self.fire("SetObject", result)
     
     #"@" - Move camera
+    #FIXME: Looks like "from" might be encoded some way
     async def message_32(self, opcode, data):
         msg = FurcBuffer(data)
         result = {
             "to": (msg.read95(2), msg.read95(2))
         }
-        while msg.remaining >= 2:
+        if msg.remaining >= 4:
             result["from"] = (msg.read95(2), msg.read95(2))
         await self.fire("MoveCamera", result)
     
     #"A" - Move avatars
     async def message_33(self, opcode, data):
         msg = FurcBuffer(data)
-        avatars = {}
-        while msg.remaining >= 10:
-            avatars[msg.read220(4)] = {
-                "pos": (msg.read220(4), msg.read220(4)),
-                "patch": msg.read220(4)
-            }
-        await self.fire("MoveAvatar", avatars)
+        furre = msg.read220(4)
+        pos = (msg.read220(2), msg.read220(2)),
+        unk1 = msg.read220(1)
+        unk2 = msg.read220(1)
+        await self.fire("MoveAvatar", furre, pos)
     
     #"B" - Set avatar colors
     async def message_34(self, opcode, data):
         msg = FurcBuffer(data)
-        avatars = {}
-        while msg.remaining >= 16:
-            avatars[msg.read220(4)] = {
-                "patch": msg.read220(4),
-                "colors":   Colors.fromStream(msg),
-            }
-        await self.fire("SetAvatarColors", avatars)
+        furre = msg.read220(4)
+        direction = msg.read220(1)
+        unk1 = msg.read220(1)
+        colors = Colors.fromStream(msg)
+        await self.fire("SetAvatarColors", furre, direction, unk1, colors)
     
     #"C" - Hide avatar at position
     async def message_35(self, opcode, data):
         msg = FurcBuffer(data)
-        avatars = {}
-        while msg.remaining >= 8:
-            avatars[msg.read220(4)] = {
-                "pos": (msg.read220(4), msg.read220(4)),
-                "patch": msg.read220(4)
-            }
-        await self.fire("HideAvatar", avatars)
+        furre = msg.read220(4)
+        pos = (msg.read220(2), msg.read220(2))
+        await self.fire("HideAvatar", furre, pos)
     
     #"D" - Set triggering furre
     #WARNING: Probably deprecated
@@ -379,8 +396,8 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]3" - Show user list
     async def message_61_19(self, opcode, data):
-        await self.fire("UserList",
-            data[0] == 49 #0 = Show usercount + list, 1 = Only count
+        await self.fire("EnableUserList",
+            data[0] == 48 #0 = Show usercount + list, 1 = Only count
         )
     
     #"]A" - Guild tag related?
@@ -389,6 +406,7 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("GuildTagA", data)
     
     #"]B" - Set user ID
+    #FIXME: This might be incorrect
     async def message_61_34(self, opcode, data):
         await self.fire("SetUserID", int(data.decode()))
     
@@ -424,38 +442,62 @@ class PacketHooks(DefaultPacketHandler):
     #"]H" - Offset avatar
     async def message_61_39(self, opcode, data):
         msg = FurcBuffer(data)
-        avatars = {}
-        while msg.remaining >= 8:
-            avatars[msg.read220(4)] = {
-                "userID": msg.read220(4),
-                "pos": (msg.read220(4), msg.read220(4)),
-            }
-        await self.fire("OffsetAvatar", avatars)
+        fuid = msg.read220(4)
+        pos = (msg.read220(2) - 256, msg.read220(2) - 256)
+        await self.fire("OffsetAvatar", fuid, pos)
     
     #"]I" - Particle Effect
+    #TODO: Implement
     async def message_61_41(self, opcode, data):
+        """Format:
+            Base220(2) unk1
+            Base220(2) unk2
+            Base220(2) unk3
+            Base220(2) unk4
+            
+            Base220(1) version
+            Base220(4) flags
+            while(remaining > 0)
+                Base220(4) unk5
+                Base220(1) unk6 (? Looks like 1)
+                if(unk6 == 1)
+                    length = 800
+                elif(unk6 == 2)
+                    length = 656
+                Base220(length) particleData #This is a byte array
+            
+            VXN format is similar: (Little endian!)
+                char(4) "FvXn"
+                uint8 version
+                uint32 flags
+                while(remaining > 0)
+                    uint16 subversion (? Looks like 27937)
+                    uint32 unk1
+                    uint8 subversion (? Looks like 1)
+                    if(unk1 == 1)
+                        length = 400
+                    elseif(unk1 == 2)
+                        length = 328
+                    char[length] particleData
+                
+        """
         await self.fire("Particles", data)
     
-    #"]J" - Particle Effect
+    #"]J" - Web map
     async def message_61_42(self, opcode, data):
         await self.fire("WebMap", data)
     
     #"]M" - Dynamic Avatars Info
+    #TODO: Implement
     async def message_61_45(self, opcode, data):
-        #TODO: Decode this
-        #Should be:
-        #(
-        #    base220 syntax,
-        #   [
-        #       (
-        #           base220 avatarVersion,
-        #           base220 gender,
-        #           base220 special
-        #       ),
-        #   ...
-        #   ]
-        #)
-        #But probably has changed since the new fox format was introduced
+        """Format:
+            while(remaining)
+                Base220(1) version
+                Base220(1) unk1
+                Base220(1) unk2
+                Base220(1) unk3
+                Base220(4) unk4
+        """
         await self.fire("DynamicAvatars", data)
     
     #"]P" - Guild tag related?
@@ -467,6 +509,29 @@ class PacketHooks(DefaultPacketHandler):
     #FIXME: This has changed!
     async def message_61_55(self, opcode, data):
         msg = FurcBuffer(data)
+        """
+        New format:
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(1) bool1
+            Base220(1) bool2
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            Base220(2) unk
+            if(remaining > 30)
+                Base220(1) length
+                for(i = 0; i < length; i++)
+                    Base220(2) unk
+                    Base220(1) unk
+        """
         await self.fire("RegionSettings", {
             "outdoor": {
                 "object": msg.read220(2),
@@ -510,11 +575,17 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("Marbled", data[1:].decode())
     
     #"]f" - Look
+    #FIXME: this might be incorrect
     async def message_61_70(self, opcode, data):
         msg = FurcBuffer(data)
         await self.fire("Look", Colors.fromStream(msg), msg.read().decode())
     
-    #"]j" - Look
+    #"]h" - Execute binary (lmao)
+    async def message_61_72(self, opcode, data):
+        msg = FurcBuffer(data)
+        await self.fire("Execute", data.decode())
+    
+    #"]j" - Music
     async def message_61_74(self, opcode, data):
         await self.fire("Music", base.b95decode(data[0:2]))
     
@@ -530,18 +601,21 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("DreamOwner", msg.read().decode())
     
     #"]q" - Load dream with custom patches
+    #FIXME: This can end with the string "modern"
     async def message_61_81(self, opcode, data):
         msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Dream", True, msg.readUntil(), msg.readUntil())
     
     #"]r" - Load dream with default patches
+    #FIXME: This can end with the string "modern"
     async def message_61_82(self, opcode, data):
         msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Dream", False, msg.readUntil(), msg.readUntil())
     
     #"]s" - Place text at location
+    #FIXME: This is probably incorrect
     async def message_61_83(self, opcode, data):
         msg = FurcBuffer(data)
         await self.fire("Text",
@@ -650,6 +724,9 @@ class Commands:
             return self.command(">")
         elif direction == -1:
             return self.command("<")
+    
+    def vascodagama(self):
+        return self.command("vascodagama")
     
     def say(self, message):
         return self.command("\"" + message)
