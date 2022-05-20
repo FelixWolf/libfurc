@@ -533,6 +533,11 @@ class PacketHooks(DefaultPacketHandler):
         """
         await self.fire("DynamicAvatars", data)
     
+    #"]N" - Unknown
+    #TODO: Implement
+    async def message_61_45(self, opcode, data):
+        pass
+    
     #"]O" - Gloam
     async def message_61_47(self, opcode, data):
         """Format:
@@ -631,11 +636,21 @@ class PacketHooks(DefaultPacketHandler):
     async def message_61_74(self, opcode, data):
         await self.fire("Music", base.b95decode(data[0:2]))
     
+    #"]k" - Unknown
+    #FIXME: Implement this
+    async def message_61_75(self, opcode, data):
+        pass
+    
     #"]m" - Marco
     async def message_61_77(self, opcode, data):
         msg = FurcBuffer(data)
         msg.readUntil()
         await self.fire("Marco", msg.read())
+    
+    #"]n" - Channel info(?)
+    #FIXME: Implement this
+    async def message_61_78(self, opcode, data):
+        pass
     
     #"]o" - Dream owner name
     async def message_61_79(self, opcode, data):
@@ -714,6 +729,16 @@ class PacketHooks(DefaultPacketHandler):
     #"^" - Item in hand
     async def message_62(self, opcode, data):
         await self.fire("ButlerPaws", base.b95decode(data[0:2]))
+    
+    #"e" - Unknown
+    #FIXME: Implement
+    async def message_69(self, opcode, data):
+        pass
+    
+    #"f" - Unknown
+    #FIXME: Implement
+    async def message_70(self, opcode, data):
+        pass
     
     #"~" - Suspend drawing
     async def message_94(self, opcode, data):
