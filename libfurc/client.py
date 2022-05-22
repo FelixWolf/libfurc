@@ -10,7 +10,7 @@ LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
 #Incoming message definitions
 class DefaultPacketHandler:
     async def message_unhandled(self, opcode, data):
-        print("Unhandled {}".format(opcode+32), data)
+        print("Unhandled {}".format(opcode), data)
 
 class PacketHooks(DefaultPacketHandler):
     def __init__(self, useLookups = False):
