@@ -488,11 +488,13 @@ class PacketHooks(DefaultPacketHandler):
             Base220(2) unk3
             Base220(2) unk4
             
+            char(6) "VXNASC"
             Base220(1) version
             Base220(4) flags
             while(remaining > 5)
+                char[2] "m!" #Static string? Same in VXN file particles
                 Base220(4) unk5
-                Base220(1) unk6 (? Looks like 1)
+                Base220(1) unk6 #Looks like always 1
                 if(unk6 == 1)
                     length = 800
                 elif(unk6 == 2)
@@ -504,7 +506,7 @@ class PacketHooks(DefaultPacketHandler):
                 uint8 version
                 uint32 flags
                 while(remaining > 5)
-                    uint16 subversion (? Looks like 27937)
+                    char[2] "m!" #Static string? Same in streamed particles
                     uint32 unk1
                     uint8 subversion (? Looks like 1)
                     if(unk1 == 1)
@@ -512,7 +514,6 @@ class PacketHooks(DefaultPacketHandler):
                     elseif(unk1 == 2)
                         length = 328
                     char[length] particleData
-                
         """
         await self.fire("Particles", data)
     
