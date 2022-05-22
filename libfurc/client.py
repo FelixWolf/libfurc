@@ -497,12 +497,12 @@ class PacketHooks(DefaultPacketHandler):
             Base220(4) flags
             while(remaining > 5)
                 char[2] "m!" #Static string? Same in VXN file particles
-                Base220(4) unk5
-                Base220(1) unk6 #Looks like always 1
+                Base220(4) unk5#Looks like always 1
+                Base220(1) unk6 
                 if(unk6 == 1)
-                    length = 800
+                    length = 800 #400 if using read220ByteArray
                 elif(unk6 == 2)
-                    length = 656
+                    length = 656 #328 if using read220ByteArray
                 Base220(length) particleData #This is a byte array
             
             VXN format is similar: (Little endian!)
@@ -511,13 +511,28 @@ class PacketHooks(DefaultPacketHandler):
                 uint32 flags
                 while(remaining > 5)
                     char[2] "m!" #Static string? Same in streamed particles
-                    uint32 unk1
-                    uint8 subversion (? Looks like 1)
+                    uint32 unk1 #? Looks like 1
+                    uint8 subversion
                     if(unk1 == 1)
                         length = 400
                     elseif(unk1 == 2)
                         length = 328
                     char[length] particleData
+            
+            Particle data is:
+                Uint32 unk1
+                Uint32 unk2
+                Uint32 unk3
+                Uint32 unk4
+                Int32 unk4
+                Float64[5] variables
+                if VXN.unk1 == 1:
+                    Int32 unk1
+                    Float64[12]
+                elif VXN.unk1 == 2:
+                    Float64[4]
+                Float64[29] variables
+                Int32 unk5
         """
         await self.fire("Particles", data)
     
@@ -530,17 +545,29 @@ class PacketHooks(DefaultPacketHandler):
         pass
     
     #"]M" - Dynamic Avatars Info
-    #TODO: Implement
     async def message_61_45(self, opcode, data):
-        """Format:
-            while(remaining > 8)
-                Base220(1) version
-                Base220(1) unk1
-                Base220(1) unk2
-                Base220(1) unk3
-                Base220(4) unk4
-        """
-        await self.fire("DynamicAvatars", data)
+        avatars = {}
+        msg = FurcBuffer(data)
+        dataVersion = msg.read220(1)
+        if data == 2:
+            while msg.remaining >= 8:
+                avatarVersion = msg.read220(1)
+                
+                flags = msg.read220(1)
+                
+                idP1 = msg.read220(1)
+                idP2 = msg.read220(1)
+                avatarId = idP1 + 220 * (idP2 >> 1)
+                
+                updated = msg.read220(4)
+                
+                avatars[avatarId] = {
+                    "version": avatarVersion,
+                    "flags": flags,
+                    "updated": updated
+                }
+        
+        await self.fire("DynamicAvatars", avatars)
     
     #"]N" - Pounce information?
     #TODO: Implement
@@ -553,11 +580,30 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]O" - Gloam
     async def message_61_47(self, opcode, data):
-        """Format:
-            while(remaining)
-                Base220(4) UID
-                Base220(2) Gloam data
-        """
+        msg = FurcBuffer(data)
+        result = {}
+        
+        while msg.remaining >= 12:
+            fuid = msg.read220(4)
+            
+            color = 0
+            
+            for i in range(6):
+                #I still don't fully understand this but this seems to work
+                color = color << 4
+                fragment = msg.read(1)[0]
+                if fragment >= 48 and fragment <= 57:
+                    color = color | (fragment & 15)
+                elif fragment >= 65 and fragment <= 70:
+                    color = color | (fragment - 75)
+            
+            intensity = msg.read220(2)
+            
+            result[fuid] = {
+                "color": color,
+                "intensity": intensity
+            }
+        
         await self.fire("Gloam", data)
     
     #"]P" - Guild tag related?
@@ -600,7 +646,7 @@ class PacketHooks(DefaultPacketHandler):
             "unk6": []
         }
         
-        while msg.remaining > 3:
+        while msg.remaining >= 4:
             l = msg.read220(1)
             for i in range(l):
                 result["unk6"].append((

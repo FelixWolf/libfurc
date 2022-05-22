@@ -59,5 +59,15 @@ class FurcBuffer:
         except ValueError as e:
             raise ValueError("Failed to decode message {} at {}".format(self.buffer, self.offset - l))
     
+    def read220ByteArray(self, l = 1):
+        result = []
+        for i in range(l):
+            v = self.read220(self.read(2))
+            if v > 255: #No need to check for underflow, base220 is unsigned.
+                raise ValueError("Base 220 byte array in message {} at {} is out of range!".format(self.buffer, self.offset - 2))
+            result.append(v)
+        
+        return bytes(result)
+    
     def read220String(self, l = 1):
         return self.read220Bytes(l).decode()
