@@ -84,7 +84,7 @@ async def message(msg):
     #print(msg)
 
 @client.on("Dream")
-async def dream(patched, package, checksum):
+async def dream(patched, package, checksum, modern):
     global currentDream, timeSinceLast
     timeSinceLast = time.time()
     if currentDream == None:
@@ -108,8 +108,8 @@ async def bookmark(user, fdl):
         currentDream.name = d[1]
 
 @client.on("Text")
-async def text(pos, t, owner, name, maturity):
-    visit = DreamVisit(owner.decode(), name.decode() if name != "" else None, parent = currentDream)
+async def text(pos, t, owner, name, maturity, gateType):
+    visit = DreamVisit(owner.decode(), name.decode() if name != "" else "|", parent = currentDream)
     print("Added {} to visit list".format(str(visit)))
     toVisit.append(visit)
     
