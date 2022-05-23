@@ -434,7 +434,7 @@ class PacketHooks(DefaultPacketHandler):
         #http://www.furcadia.com/services/profile/profile.php4?cmd=view&p=<PID>
         await self.fire("LastProfileID", pid)
     
-    #"]-" - Prefix text
+    #"]-" - Prefix text, used by say command (Can be overridden by 61_48)
     async def message_61_13(self, opcode, data):
         await self.fire("Prefix", data)
     
@@ -479,10 +479,12 @@ class PacketHooks(DefaultPacketHandler):
         #await self.fire("SetUserID", int(data.decode()))
     
     
-    #"]A" - Guild tag related?
-    #FIXME: Figure out how this works
+    #"]A" - Download guild tag command (DEPRECATED?)
     async def message_61_33(self, opcode, data):
-        await self.fire("GuildTagA", data)
+        msg = FurcBuffer(data)
+        checksum = int(msg.readUntil()) #Download it from file server using gt%i
+        name = msg.readUntil()
+        await self.fire("GuildTagDownload", checksum, name)
     
     #"]B" - Set user ID
     async def message_61_34(self, opcode, data):
@@ -649,10 +651,9 @@ class PacketHooks(DefaultPacketHandler):
         
         await self.fire("Gloam", data)
     
-    #"]P" - Guild tag related?
-    #FIXME: Figure out how this works
+    #"]P" - Prefix next line (Can be overridden by 61_13)
     async def message_61_48(self, opcode, data):
-        await self.fire("GuildTagB", data)
+        await self.fire("PrefixLine", data)
     
     #"]S" - Connection security info
     async def message_61_51(self, opcode, data):
@@ -706,6 +707,27 @@ class PacketHooks(DefaultPacketHandler):
         """
             Format:
                 char[1] opcode # 0 - 7
+                
+            if opcode == 0: #End
+                #No params
+            
+            if opcode == 2: #Draw
+                #Probably base220 byte array
+            
+            if opcode == 3: #UNKNOWN
+                #unknown
+            
+            if opcode == 4: #Set shape
+                base220(4) shape
+                
+            if opcode == 5:
+                #unknown
+            
+            if opcode == 6: #Request data?
+                #no op
+            
+            if opcode == 7:
+                char(*) filename
         """
         pass
     
@@ -731,12 +753,15 @@ class PacketHooks(DefaultPacketHandler):
                 afkTime = int(msg.readUntil())
                 disconnectTime = int(msg.readUntil())
                 await self.fire("RemoteConfig", "Timers", afkTime, disconnectTime)
+            
             else:
                 #afkconfig <int> <str>
                 await self.fire("RemoteConfig", "RequestSend")
+        
         elif subop == b"r":
             message = msg.read()
             await self.fire("RemoteConfig", "AutoWhisper", message)
+        
         elif subop == b"m":
             message = msg.read()
             await self.fire("RemoteConfig", "AFKWhisper", message)
@@ -904,7 +929,11 @@ class PacketHooks(DefaultPacketHandler):
     #"]v" - Effect
     async def message_61_86(self, opcode, data):
         msg = FurcBuffer(data)
-        #Known types: a b c d
+        #Known types:
+        #a = breath
+        #b = flame
+        #c = glamour
+        #d = splash
         effectType = msg.read(1)
         x = msg.read95(2)
         y = msg.read95(2)
