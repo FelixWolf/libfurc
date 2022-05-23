@@ -426,9 +426,13 @@ class PacketHooks(DefaultPacketHandler):
     async def message_61_10(self, opcode, data):
         await self.fire("OpenURL", True, data)
     
-    #"]+" - Unknown
+    #"]+" - Set last profile ID (DEPRECATED)
     async def message_61_11(self, opcode, data):
-        pass
+        msg = FurcBuffer(data)
+        pid = int(msg.readUntil().decode())
+        #For use with:
+        #http://www.furcadia.com/services/profile/profile.php4?cmd=view&p=<PID>
+        await self.fire("LastProfileID", pid)
     
     #"]-" - Prefix text
     async def message_61_13(self, opcode, data):
