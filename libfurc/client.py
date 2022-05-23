@@ -611,14 +611,11 @@ class PacketHooks(DefaultPacketHandler):
         
         await self.fire("DynamicAvatars", avatars)
     
-    #"]N" - Pounce information?
-    #TODO: Implement
+    #"]N" - Show pounce channel list
     async def message_61_46(self, opcode, data):
-        """
-            Format:
-                char(1) opcode #1 = show pounce list, 2 = ?
-        """
-        pass
+        msg = FurcBuffer(data)
+        showPounceChannels = bool(int(msg.read(1)))
+        await self.fire("ShowPounceChannels", showPounceChannels)
     
     #"]O" - Gloam
     async def message_61_47(self, opcode, data):
@@ -720,22 +717,25 @@ class PacketHooks(DefaultPacketHandler):
             avatars[msg.read220(4)] = msg.read220(1)
         await self.fire("KitterDust", avatars)
     
-    #"]`" - Load remote config?
-    #TODO: Implement
+    #"]`" - Load remote config
     async def message_61_64(self, opcode, data):
-        """
-            Format:
-                char(1) opcode
-                if opcode == "e":
-                    char(1) opcode2 #0 = NOP, 1 = ?, or 2 = Send config?
-                if opcode == "m":
-                    #afk whisper response
-                    char(?) data
-                if opcode == "r":
-                    #whisper auto response
-                    char(?) data
-        """
-        pass
+        msg = FurcBuffer(data)
+        subop = msg.read(1)
+        if subop == b"e":
+            subop = int(msg.read(1))
+            if subop == 1:
+                afkTime = int(msg.readUntil())
+                disconnectTime = int(msg.readUntil())
+                await self.fire("RemoteConfig", "Timers", afkTime, disconnectTime)
+            else:
+                #afkconfig <int> <str>
+                await self.fire("RemoteConfig", "RequestSend")
+        elif subop == b"r":
+            message = msg.read()
+            await self.fire("RemoteConfig", "AutoWhisper", message)
+        elif subop == b"m":
+            message = msg.read()
+            await self.fire("RemoteConfig", "AFKWhisper", message)
     
     #"]a" - Upload dream request (DEPRECATED)
     async def message_61_65(self, opcode, data):
@@ -785,13 +785,13 @@ class PacketHooks(DefaultPacketHandler):
     async def message_61_71(self, opcode, data):
         msg = FurcBuffer(data)
         command = msg.read()
-        await self.fire("Execute", command)
+        await self.fire("Execute", command, False)
     
     #"]h" - Execute binary and close (lmao)
     async def message_61_72(self, opcode, data):
         msg = FurcBuffer(data)
         command = msg.read()
-        await self.fire("Execute", command)
+        await self.fire("Execute", command, True)
     
     #"]i" - Create a file with path name (DEPRECATED)
     async def message_61_73(self, opcode, data):
@@ -824,6 +824,19 @@ class PacketHooks(DefaultPacketHandler):
     #"]n" - Channel info(?)
     #FIXME: Implement this
     async def message_61_78(self, opcode, data):
+        """
+            format:
+                base220(1) unk1
+                base220(1) unk2
+                base220(1) unk3
+                
+                while remaining:
+                    base220(1) nameLength
+                    char(nameLength)
+                    base220(4) unk4
+                    base220(4) unk5
+                    
+        """
         pass
     
     #"]o" - Dream owner name
