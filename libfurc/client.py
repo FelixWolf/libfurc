@@ -765,16 +765,11 @@ class PacketHooks(DefaultPacketHandler):
     async def message_61_74(self, opcode, data):
         await self.fire("Music", base.b95decode(data[0:2]))
     
-    #"]k" - Unknown
-    #FIXME: Implement this
+    #"]k" - Set file server
     async def message_61_75(self, opcode, data):
-        """
-            Format:
-                Base95(1) unk1
-                if unk1 > 15:
-                    unk1 = 18
-        """
-        pass
+        msg = FurcBuffer(data)
+        serverID = msg.read95()
+        await self.fire("SetFileServer", serverID)
     
     #"]m" - Marco
     async def message_61_77(self, opcode, data):
