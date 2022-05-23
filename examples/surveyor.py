@@ -18,7 +18,7 @@ class DreamVisit:
         self.checksum = None
     
     def __str__(self):
-        return "furc://{}:{}/ gomap {} standard {}".format(self.owner, self.name, self.gomap, self.standard)
+        return "furc://{}{}/ gomap {} standard {}".format(self.owner, ":"+self.name if self.name != "|" and self.name != None else "", self.gomap, self.standard)
 
 data = {}
 visited = []
@@ -103,13 +103,14 @@ async def bookmark(user, fdl):
     d = fdl.split("furc://",1)[-1].split("/")[0].split(":")
     if len(d) == 1:
         currentDream.owner = d[0]
+        currentDream.name = "|"
     elif len(d) == 2:
         currentDream.owner = d[0]
         currentDream.name = d[1]
 
 @client.on("Text")
 async def text(pos, t, owner, name, maturity, gateType):
-    visit = DreamVisit(owner.decode(), name.decode() if name != "" else "|", parent = currentDream)
+    visit = DreamVisit(owner.decode(), name.decode(), parent = currentDream)
     print("Added {} to visit list".format(str(visit)))
     toVisit.append(visit)
     

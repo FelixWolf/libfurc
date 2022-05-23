@@ -4,13 +4,14 @@ from . import base
 from .furcbuffer import FurcBuffer
 from .account import Character
 from .colors import Colors
+import logging
 
 LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
 
 #Incoming message definitions
 class DefaultPacketHandler:
     async def message_unhandled(self, opcode, data):
-        print("Unhandled {}".format(opcode), data)
+        logging.error("Unhandled {}".format(opcode), data)
 
 class PacketHooks(DefaultPacketHandler):
     def __init__(self, useLookups = False):
@@ -338,26 +339,28 @@ class PacketHooks(DefaultPacketHandler):
     
     #Default handler
     async def message_61_unhandled(self, opcode, data):
-        print("Unhandled 61:{}".format(opcode), data)
+        logging.error("Unhandled 61:{}".format(opcode), data)
     
     #"]!" - Adult warning
     async def message_61_1(self, opcode, data):
-        """
-            Format:
-                char(*) maturity
-            
-            Maturity can start with "+" to trigger a flag of sorts
-        """
-        await self.fire("AdultWarning")
+        maturity = data.decode()
+        parental = False
+        if maturity.startswith("+"):
+            parental = True
+            maturity = maturity[1:]
+        
+        await self.fire("MaturityWarning", parental, maturity)
     
     #"]#" - Dialog
     async def message_61_3(self, opcode, data):
         msg = FurcBuffer(data)
         diagID = msg.readUntil().decode()
+        
         if diagID == "xxxx":
             diagID = -1
         else:
             diagID = int(diagID)
+    
         await self.fire("Dialog",
             diagID, #Dialog ID
             int(msg.readUntil().decode()), #Dialog Type
@@ -619,6 +622,7 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("ConnectionSecurity", flag)
     
     #"]W" - Region settings
+    #FIXME: Resolve unknown variables
     async def message_61_55(self, opcode, data):
         msg = FurcBuffer(data)
         result = {
@@ -694,10 +698,9 @@ class PacketHooks(DefaultPacketHandler):
         """
         pass
     
-    #"]a" - Waiting for dream
-    #FIXME: Confirm this is correct
+    #"]a" - Upload dream request (DEPRECATED)
     async def message_61_65(self, opcode, data):
-        await self.fire("UploadReady")
+        logging.warn("Received deprecated 61:65 (Upload dream request) from server!")
     
     #"]b" - Resize map
     async def message_61_64(self, opcode, data):
@@ -719,18 +722,13 @@ class PacketHooks(DefaultPacketHandler):
         background = msg.readUntil()
         await self.fire("Marbled", t, data[1:].decode())
     
-    #"]d" - Unknown (DEPRECATED?)
-    #TODO: Implement
+    #"]d" - Something something stickers prototype (DEPRECATED)
     async def message_61_68(self, opcode, data):
-        pass
+        logging.warn("Received deprecated 61:68 (Unknown) from server!")
     
-    #"]e" - Unknown (DEPRECATED?)
-    #TODO: Implement
+    #"]e" - Something something stickers prototype (DEPRECATED)
     async def message_61_69(self, opcode, data):
-        """
-            String parameter, unknown usage
-        """
-        pass
+        logging.warn("Received deprecated 61:69 (Unknown) from server!")
     
     #"]f" - Look
     async def message_61_70(self, opcode, data):
@@ -747,14 +745,14 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         await self.fire("Execute", data.decode())
     
-    #"]i" - Create a file with path name (DEPRECATED?)
+    #"]i" - Create a file with path name (DEPRECATED)
     async def message_61_73(self, opcode, data):
         """
             Format:
                 char(1) bool # 1 = write, anything else is NOP
                 char(*) path #?
         """
-        pass
+        logging.warn("Received deprecated 61:73 (Create file) from server!")
     
     #"]j" - Music
     async def message_61_74(self, opcode, data):
