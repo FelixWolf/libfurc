@@ -255,7 +255,6 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("SetObject", result)
     
     #"@" - Move camera
-    #FIXME: Looks like "from" might be encoded some way
     async def message_32(self, opcode, data):
         msg = FurcBuffer(data)
         result = {
@@ -291,11 +290,19 @@ class PacketHooks(DefaultPacketHandler):
         pos = (msg.read220(2), msg.read220(2))
         await self.fire("HideAvatar", furre, pos)
     
-    #"D" - Set triggering furre
-    #WARNING: Probably deprecated
+    #"D" - Announce furre presence
     async def message_36(self, opcode, data):
         msg = FurcBuffer(data)
-        await self.fire("DSTriggerer", msg.read220(4))
+        fuid = msg.read220(4)
+        x = msg.read220(2)
+        y = msg.read220(2)
+        direction = msg.read220(1)
+        shape = msg.read220(1)
+        unk1 = msg.read220(4)
+        unk2 = msg.read220(4)
+        unk3 = msg.read220(2)
+        unk4 = msg.read220(2)
+        await self.fire("FurreArrive", fuid, (x, y), direction, shape, unk1, unk2, unk3, unk4)
     
     #"E" - Spawn SFX
     async def message_37(self, opcode, data):
