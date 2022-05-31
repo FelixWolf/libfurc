@@ -1,7 +1,8 @@
 LibFurc
 =======
 
-A python library for handling Furcadia formats, compiling and running(vm) DragonSpeak, and various other things.
+A python library for handling Furcadia formats, compiling and running(vm) DragonSpeak, and various other things.<br/>
+**Contributions welcome!**
 
 Features
 ========
@@ -9,22 +10,28 @@ Features
 * Account based log in
 * INI based log in
 * Async client
-* Support for most server to client messages
+* Near complete support for all server to client messages
 * Some support for client to server messages
+* VXN support (Particles!)
 
 Planned Features
 ================
 
-* More support for client to server messages
 * Documentation
 * Dream support
 * FSH support
 * FBJ support
 * Fox support
-* VXN support
 * PCX support (Although not furcadia specific, it'll be implemented)
 * DragonSpeak Compiler
 * DragonSpeak VM
+
+Source referencing
+==================
+Writing a different library for Furcadia, or need to look up message opcodes for Furcadia?
+Perhaps need information on a file format?
+Feel free to reference this source code without attibuting this project!
+Not only do I not mind, but I encourage this. Properly written software benefits everyone in the end.
 
 Disclaimer
 ==========
