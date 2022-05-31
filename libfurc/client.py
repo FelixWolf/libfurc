@@ -92,6 +92,7 @@ class PacketHooks(DefaultPacketHandler):
                     offset += 3
                 else:
                     repeats = msg.read95(3) + 1
+                    val = msg.read95(3)
                     for i in range(repeats):
                         variables[offset] = val
                         offset += 3
@@ -169,13 +170,18 @@ class PacketHooks(DefaultPacketHandler):
         from_y = msg.read95(2)
         to_x = msg.read95(2)
         to_y = msg.read95(2)
-        while msg.remaining > 2:
+        while msg.remaining >= 6:
             line = msg.read95(2)
             if line > 8000:
                 line = line - 8000 + (msg.read95(2) * 1000)
+            
+            extra_x = msg.read95(2)
+            extra_y = msg.read95(2)
+            
             result = {
                 "from": (from_x, from_y),
                 "to": (to_x, to_y),
+                "extra": (extra_x, extra_y),
                 "line": line
             }
             await self.fire("DSEvent", True, result)
@@ -187,13 +193,18 @@ class PacketHooks(DefaultPacketHandler):
         from_y = msg.read95(2)
         to_x = msg.read95(2)
         to_y = msg.read95(2)
-        while msg.remaining > 2:
+        while msg.remaining >= 8:
             line = msg.read95(2)
             if line > 8000:
                 line = line - 8000 + (msg.read95(2) * 1000)
+            
+            extra_x = msg.read95(2)
+            extra_y = msg.read95(2)
+        
             result = {
                 "from": (from_x, from_y),
                 "to": (to_x, to_y),
+                "extra": (extra_x, extra_y),
                 "line": line
             }
             await self.fire("DSEvent", False, result)
@@ -238,7 +249,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #";" - Load map
     async def message_27(self, opcode, data):
-        await self.fire("DSEventAddon", data.decode())
+        await self.fire("LoadMap", data.decode())
     
     #"<" - Spawn avatar
     async def message_28(self, opcode, data):
@@ -356,7 +367,7 @@ class PacketHooks(DefaultPacketHandler):
             })
         await self.fire("SetAmbient", result)
     
-    #"[" - Server authenticate
+    #"[" - Disconnected (Reconnect allowed)
     async def message_59(self, opcode, data):
         await self.fire("Disconnect", data.decode())
     
@@ -535,10 +546,10 @@ class PacketHooks(DefaultPacketHandler):
     #TODO: Implement
     async def message_61_41(self, opcode, data):
         """Format:
-            Base220(2) unk1
-            Base220(2) unk2
-            Base220(2) unk3
-            Base220(2) unk4
+            Base220(2) x
+            Base220(2) y
+            Base220(2) offsetX
+            Base220(2) offsetY
             
             char(6) "VXNASC"
             Base220(1) version
@@ -851,22 +862,23 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("Marco", polon)
     
     #"]n" - Channel info(?)
-    #FIXME: Implement this
     async def message_61_78(self, opcode, data):
-        """
-            format:
-                base220(1) unk1
-                base220(1) unk2
-                base220(1) unk3
-                
-                while remaining:
-                    base220(1) nameLength
-                    char(nameLength)
-                    base220(4) unk4
-                    base220(4) unk5
-                    
-        """
-        pass
+        msg = FurcBuffer(data)
+        version = msg.read220(1)
+        channelUpdateType = msg.read220(1)
+        unk1 = msg.read220(1)
+        while msg.remaining >= 9:
+            nameLength = msg.read220(1)
+            name = msg.read(nameLength)
+            bitpack = msg.read220(4)
+            canJoin = bitpack >> 7 & 1
+            maturity = (bitpack >> 8 & 0xf) * 100
+            peopleCount = bitpack >> 25 & 0x1f
+            canTell = bitpack & 0x4000
+            canListen = bitpack & 0x20000
+            canBroadcast = bitpack & 0x40000
+            channelImage = msg.read220(4)
+            await self.fire("ChannelInfo", channelUpdateType == "@", name, maturity, peopleCount, canTell, canListen, canBroadcast, channelImage)
     
     #"]o" - Dream owner name
     async def message_61_79(self, opcode, data):
@@ -912,7 +924,7 @@ class PacketHooks(DefaultPacketHandler):
         title = msg.readUntil()
         maturity = int(msg.readUntil())
         gateType = int(msg.readUntil()) #Gate type: 0 = Normal, 1 = SS, 2 = Guild
-        await self.fire("Text", (x, y), textType name, title, maturity, gateType)
+        await self.fire("Text", (x, y), textType, name, title, maturity, gateType)
     
     #"]t" - Clear text at location
     async def message_61_84(self, opcode, data):
