@@ -4,6 +4,7 @@ from . import base
 from .furcbuffer import FurcBuffer
 from .account import Character
 from .colors import Colors
+from .particles import Particles
 import logging
 
 LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
@@ -543,57 +544,14 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("OffsetAvatar", fuid, (x, y))
     
     #"]I" - Particle Effect
-    #TODO: Implement
     async def message_61_41(self, opcode, data):
-        """Format:
-            Base220(2) x
-            Base220(2) y
-            Base220(2) offsetX
-            Base220(2) offsetY
-            
-            char(6) "VXNASC"
-            Base220(1) version
-            Base220(4) flags
-            while(remaining > 5)
-                char[2] "m!" #Static string? Same in VXN file particles
-                Base220(4) unk5#Looks like always 1
-                Base220(1) unk6 
-                if(unk6 == 1)
-                    length = 800 #400 if using read220ByteArray
-                elif(unk6 == 2)
-                    length = 656 #328 if using read220ByteArray
-                Base220(length) particleData #This is a byte array
-            
-            VXN format is similar: (Little endian!)
-                char(4) "FvXn"
-                uint8 version
-                uint32 flags
-                while(remaining > 5)
-                    char[2] "m!" #Static string? Same in streamed particles
-                    uint32 unk1 #? Looks like 1
-                    uint8 subversion
-                    if(unk1 == 1)
-                        length = 400
-                    elseif(unk1 == 2)
-                        length = 328
-                    char[length] particleData
-            
-            Particle data is:
-                Uint32 unk1
-                Uint32 unk2
-                Uint32 unk3
-                Uint32 unk4
-                Int32 unk4
-                Float64[5] variables
-                if VXN.unk1 == 1:
-                    Int32 unk1
-                    Float64[12]
-                elif VXN.unk1 == 2:
-                    Float64[4]
-                Float64[29] variables
-                Int32 unk5
-        """
-        await self.fire("Particles", data)
+        msg = FurcBuffer(data)
+        x = msg.read220(2)
+        y = msg.read220(2)
+        offset_x = msg.read220(2)
+        offset_y = msg.read220(2)
+        particles = Particles.loadsStream(data)
+        await self.fire("Particles", (x, y), (offset_x, offset_y), particles)
     
     #"]J" - Web map
     async def message_61_42(self, opcode, data):
