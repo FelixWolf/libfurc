@@ -39,10 +39,10 @@ class PacketHooks(DefaultPacketHandler):
     
     #Messages
     #" " - Remove avatar by ID
-    async def message_1(self, opcode, data):
+    async def message_0(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
-        await self.fire("RemoveAvatarID", fuid)
+        await self.fire("RemoveAvatarID", RemoveAvatarID(uid = fuid))
     
     #"!" - Sound
     async def message_1(self, opcode, data):
@@ -550,7 +550,7 @@ class PacketHooks(DefaultPacketHandler):
         y = msg.read220(2)
         offset_x = msg.read220(2)
         offset_y = msg.read220(2)
-        particles = Particles.loadsStream(data)
+        particles = Particles.loadsMessage(data)
         await self.fire("Particles", (x, y), (offset_x, offset_y), particles)
     
     #"]J" - Web map
