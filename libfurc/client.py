@@ -618,7 +618,7 @@ class PacketHooks(DefaultPacketHandler):
                 "intensity": intensity
             }
         
-        await self.fire("Gloam", data)
+        await self.fire("Gloam", result)
     
     #"]P" - Prefix next line (Can be overridden by 61_13)
     async def message_61_48(self, opcode, data):
@@ -977,6 +977,14 @@ class PacketHooks(DefaultPacketHandler):
         if name not in self.listeners:
             return
         self.listeners[name].remove(name)
+    
+    async def handlePacket(self, data):
+        await self.fire("Raw", data)
+        await getattr(
+            self,
+            "message_" + str(data[0]-32),
+            self.message_unhandled
+        )(data[0]-32, data[1:])
 
 #Outgoing message definitions
 class Commands:
@@ -986,6 +994,7 @@ class Commands:
                 character.name,
                 character.password
             ))
+        
         elif character.type == character.TYPE_ACCOUNT:
             return self.command("account {} {} {}".format(
                 character.account.username,
@@ -999,6 +1008,7 @@ class Commands:
     def rotate(self, direction):
         if direction == 1:
             return self.command(">")
+        
         elif direction == -1:
             return self.command("<")
     
@@ -1078,6 +1088,9 @@ class Client(PacketHooks, Commands):
             data = data.encode()
         return self.send(data + b"\n")
     
+    def handlePacket(self, data):
+        pass
+    
     @property
     def connected(self):
         if self.reader == None or self.writer == None:
@@ -1100,11 +1113,7 @@ class Client(PacketHooks, Commands):
             if len(data) == 0: #If empty, ignore
                 continue
             
-            await getattr(
-                self,
-                "message_" + str(data[0]-32),
-                self.message_unhandled
-            )(data[0]-32, data[1:])
+            await self.handlePacket(data)
         
         #We are out of the loop! Presume Disconnected!
         self.reader = None
