@@ -24,12 +24,10 @@ class Particles:
     def loadsVXN(cls, data):
         magic, version, flags = struct.unpack_from("<4sBI", data)
         if magic != b"FvXn":
-            print("Invalid VXN file!")
-            return
+            raise ValueError("Invalid VXN file!")
         
         if version != 1:
-            print("Only know version 1")
-            return
+            raise ValueError("Only know version 1")
         
         offset = 9
         
@@ -37,8 +35,7 @@ class Particles:
         while offset < len(data):
             magic, pType, version = struct.unpack_from("<2sIB", data, offset)
             if magic != b"m!":
-                print("Unexpected data in particle stream!")
-                return
+                raise ValueError("Unexpected data in particle stream!")
             
             offset += 7
             source = ParticleSource(version, pType)
@@ -59,8 +56,7 @@ class Particles:
                     source.attributes.append(p)
                 offset += 32
             else:
-                print("Unknown particle type {}".format(pType))
-                return
+                raise ValueError("Unknown particle type {}".format(pType))
             
             for p in struct.unpack_from("<28dii", data, offset):
                 source.attributes.append(p)
@@ -77,8 +73,7 @@ class Particles:
         if data[:6] == b"VXNASC":
             offset = 6 #Raw, no offsets
         else:
-            print("Invalid VXN ASCII stream!")
-            return
+            raise ValueError("Invalid VXN ASCII stream!")
         
         version = base.b220decode(data[offset:offset+1])
         offset += 1
@@ -89,8 +84,7 @@ class Particles:
         result = cls(version, flags)
         while offset < len(data):
             if data[offset:offset+2] != b"m!":
-                print("Unexpected data in particle stream!")
-                return
+                raise ValueError("Unexpected data in particle stream!")
             
             offset += 2
             
@@ -105,8 +99,7 @@ class Particles:
             elif pType == 2:
                 sourceDataLen = 328
             else:
-                print("Unknown source data type!")
-                return
+                raise ValueError("Unknown source data type!")
             
             sourceData = []
             for i in range(0, sourceDataLen, 1):
@@ -133,8 +126,7 @@ class Particles:
                     source.attributes.append(p)
                 sourceOffset += 32
             else:
-                print("Unknown particle type {}".format(pType))
-                return
+                raise ValueError("Unknown particle type {}".format(pType))
             
             for p in struct.unpack_from("<28dii", sourceData, sourceOffset):
                 source.attributes.append(p)

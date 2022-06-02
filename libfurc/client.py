@@ -550,7 +550,7 @@ class PacketHooks(DefaultPacketHandler):
         y = msg.read220(2)
         offset_x = msg.read220(2)
         offset_y = msg.read220(2)
-        particles = Particles.loadsMessage(data)
+        particles = Particles.loadsMessage(data[8:])
         await self.fire("Particles", (x, y), (offset_x, offset_y), particles)
     
     #"]J" - Web map
