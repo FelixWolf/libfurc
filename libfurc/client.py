@@ -42,7 +42,7 @@ class PacketHooks(DefaultPacketHandler):
     async def message_0(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
-        await self.fire("RemoveAvatarID", RemoveAvatarID(uid = fuid))
+        await self.fire("RemoveAvatarID", fuid)
     
     #"!" - Sound
     async def message_1(self, opcode, data):
@@ -455,7 +455,7 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         #0 = Show usercount + list, 1 = Only count
         enabled = not bool(int(msg.read(1)))
-        await self.fire("EnableUserList", enable)
+        await self.fire("EnableUserList", enabled)
     
     #"]?" - Unknown, something related to pounce
     #FIXME: Figure out wtf this is
@@ -920,8 +920,12 @@ class PacketHooks(DefaultPacketHandler):
     async def message_61_88(self, opcode, data):
         await self.fire("Update")
     
+    #"]y" - Changing IP/port
+    async def message_61_89(self, opcode, data):
+        await self.fire("Update", data)
+    
     #"]z" - UID response
-    async def message_61_88(self, opcode, data):
+    async def message_61_90(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = int(msg.readUntil())
         await self.fire("UID", fuid)
@@ -972,6 +976,11 @@ class PacketHooks(DefaultPacketHandler):
             self.listeners[name].append(func)
             return func
         return _
+    
+    def hook(self, name, func):
+        if name not in self.listeners:
+            self.listeners[name] = []
+        self.listeners[name].append(func)
     
     def off(self, name, func):
         if name not in self.listeners:
