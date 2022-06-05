@@ -74,10 +74,10 @@ class PacketHooks(DefaultPacketHandler):
     async def message_15(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
-        x = msg.read220(4)
-        y = msg.read220(4)
-        direction = msg.read220(4)
-        shape = msg.read220(4)
+        x = msg.read220(2)
+        y = msg.read220(2)
+        direction = msg.read220(1)
+        shape = msg.read220(1)
         await self.fire("AnimateAvatar", fuid, (x,y), direction, shape)
     
     #"0" - Sync dream variables
@@ -213,26 +213,49 @@ class PacketHooks(DefaultPacketHandler):
     #"8" - DS event addon
     async def message_24(self, opcode, data):
         msg = FurcBuffer(data)
+        moveFlag = msg.read95(1)
+        randSeed = msg.read95(5)
+        try:
+            saidNum = msg.read95(3)
+        except ValueError:
+            #TEMPORARY: Fix for server sending non-base95 numbers
+            saidNum = 0
+        facingDir = msg.read95(1)
+        entryCode = msg.read95(3)
+        objPaws =  msg.read95(3)
+        furreCount = msg.read95(2)
+        userID = msg.read95(6)
+        DSBtn = msg.read95(2)
+        dreamCookies = msg.read95(3)
+        triggererCookies = msg.read95(2)
+        portalOpen = (msg.read95(2), msg.read95(2))
+        second = msg.read95(1)
+        minute = msg.read95(1)
+        hour = msg.read95(1)
+        day = msg.read95(1)
+        month = msg.read95(1)
+        year = msg.read95(2)
+        portalClose = (msg.read95(2), msg.read95(2))
         await self.fire("DSEventAddon", {
-            "moveFlag": msg.read95(1),
-            "randSeed": msg.read95(5),
-            "saidNum": msg.read95(3),
-            "facingDir": msg.read95(1),
-            "entryCode": msg.read95(3),
-            "objPaws": msg.read95(3),
-            "furreCount": msg.read95(2),
-            "userID": msg.read95(6),
-            "DSBtn": msg.read95(2),
-            "dreamCookies": msg.read95(3),
-            "triggererCookies": msg.read95(2),
-            "portalOpen": (msg.read95(2), msg.read95(2)),
-            "second": msg.read95(1),
-            "minute": msg.read95(1),
-            "hour": msg.read95(1),
-            "day": msg.read95(1),
-            "month": msg.read95(1),
-            "year": msg.read95(2),
-            "portalClose": (msg.read95(2), msg.read95(2))
+            "moveFlag": moveFlag,
+            "randSeed": randSeed,
+            "saidNum": saidNum,
+            "facingDir": facingDir,
+            "entryCode": entryCode,
+            "objPaws": objPaws,
+            "furreCount": furreCount,
+            "userID": userID,
+            "DSBtn": DSBtn,
+            "dreamCookies": dreamCookies,
+            "triggererCookies": triggererCookies,
+            "portalOpen": portalOpen,
+            "second": second,
+            "minute": minute,
+            "hour": hour,
+            "day": day,
+            "month": month,
+            "year": year,
+            "portalClose": portalClose
         })
     
     #"9" - Region flags
@@ -304,10 +327,10 @@ class PacketHooks(DefaultPacketHandler):
     async def message_33(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
-        x = msg.read220(4)
-        y = msg.read220(4)
-        direction = msg.read220(4)
-        shape = msg.read220(4)
+        x = msg.read220(2)
+        y = msg.read220(2)
+        direction = msg.read220(1)
+        shape = msg.read220(1)
         await self.fire("MoveAvatar", fuid, (x,y), direction, shape)
     
     #"B" - Set avatar colors
@@ -448,7 +471,7 @@ class PacketHooks(DefaultPacketHandler):
     
     #"]-" - Prefix text, used by say command (Can be overridden by 61_48)
     async def message_61_13(self, opcode, data):
-        await self.fire("Prefix", data)
+        await self.fire("PrefixBadge", data)
     
     #"]3" - Show user list
     async def message_61_19(self, opcode, data):
@@ -985,7 +1008,7 @@ class PacketHooks(DefaultPacketHandler):
     def off(self, name, func):
         if name not in self.listeners:
             return
-        self.listeners[name].remove(name)
+        self.listeners[name].remove(func)
     
     async def handlePacket(self, data):
         await self.fire("Raw", data)
