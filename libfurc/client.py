@@ -559,7 +559,7 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("DisableTab", disabled)
     
     #"]H" - Offset avatar
-    async def message_61_39(self, opcode, data):
+    async def message_61_41(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
         x = msg.read220(2) - 256
