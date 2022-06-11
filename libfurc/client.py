@@ -7,6 +7,7 @@ from .colors import Colors
 from .particles import Particles
 import datetime
 import time
+import math
 import logging
 
 LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
