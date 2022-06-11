@@ -5,6 +5,8 @@ from .furcbuffer import FurcBuffer
 from .account import Character
 from .colors import Colors
 from .particles import Particles
+import datetime
+import time
 import logging
 
 LIVE_SERVER = ("lightbringer.furcadia.com", 6500)
@@ -104,13 +106,21 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 6:
-            x = msg.read220(4)
-            y = msg.read220(4)
-            floorID = msg.read220(4)
+            x = msg.read220(2)
+            y = msg.read220(2)
+            floorID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "floor": floorID
+                "floor": floorID,
+                "repeats": repeats
             })
+        
         await self.fire("SetFloor", result)
     
     #"2" - Set walls
@@ -118,12 +128,19 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 6:
-            x = msg.read220(4)
-            y = msg.read220(4)
-            wallID = msg.read220(4)
+            x = msg.read220(2)
+            y = msg.read220(2)
+            wallID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "wall": wallID
+                "wall": wallID,
+                "repeats": repeats
             })
         await self.fire("SetWall", result)
     
@@ -141,9 +158,9 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 6:
-            x = msg.read220(4)
-            y = msg.read220(4)
-            regionID = msg.read220(4)
+            x = msg.read220(2)
+            y = msg.read220(2)
+            regionID = msg.read220(2)
             result.append({
                 "pos": (x, y),
                 "region": regionID
@@ -155,12 +172,19 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 6:
-            x = msg.read220(4)
-            y = msg.read220(4)
-            effectID = msg.read220(4)
+            x = msg.read220(2)
+            y = msg.read220(2)
+            effectID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "id": effectID
+                "id": effectID,
+                "repeats": repeats
             })
         await self.fire("SetEffect", result)
     
@@ -285,7 +309,7 @@ class PacketHooks(DefaultPacketHandler):
         shape = msg.read220(1)
         nameLength = msg.read220(1)
         name = msg.read(nameLength)
-        colors = Colors.fromStream(msg)
+        colors = Colors.fromStream(msg, False)
         flags = msg.read220(1)
         afkTime = msg.read220(4)
         scale = msg.read220(1)
@@ -300,13 +324,21 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         result = []
         while msg.remaining >= 6:
-            x = msg.read220(4)
-            y = msg.read220(4)
-            objectID = msg.read220(4)
+            x = msg.read220(2)
+            y = msg.read220(2)
+            objectID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "id": objectID
+                "id": objectID,
+                "repeats": repeats
             })
+        
         await self.fire("SetObject", result)
     
     #"@" - Move camera
@@ -353,6 +385,8 @@ class PacketHooks(DefaultPacketHandler):
     async def message_36(self, opcode, data):
         msg = FurcBuffer(data)
         fuid = msg.read220(4)
+        if fuid == 0: #Server side bug fix
+            return
         x = msg.read220(2)
         y = msg.read220(2)
         direction = msg.read220(1)
@@ -371,10 +405,18 @@ class PacketHooks(DefaultPacketHandler):
             x = msg.read220(2)
             y = msg.read220(2)
             fxID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "id": fxID
+                "id": fxID,
+                "repeats": repeats
             })
+        
         await self.fire("SetSFX", result)
     
     #"F" - Spawn Ambient
@@ -385,10 +427,18 @@ class PacketHooks(DefaultPacketHandler):
             x = msg.read220(2)
             y = msg.read220(2)
             ambientID = msg.read220(2)
+            
+            #Decode repeats
+            repeats = 48 * math.floor(x / 1000) + math.floor(y / 1000)
+            x = x % 1000
+            y = y % 1000
+            
             result.append({
                 "pos": (x, y),
-                "id": ambientID
+                "id": ambientID,
+                "repeats": repeats
             })
+        
         await self.fire("SetAmbient", result)
     
     #"[" - Disconnected (Reconnect allowed)
@@ -798,7 +848,7 @@ class PacketHooks(DefaultPacketHandler):
     #"]f" - Look
     async def message_61_70(self, opcode, data):
         msg = FurcBuffer(data)
-        colors = Colors.fromStream(msg)
+        colors = Colors.fromStream(msg, False)
         name = msg.read().decode()
         await self.fire("Look", colors, name)
     

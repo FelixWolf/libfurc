@@ -23,6 +23,9 @@ class FurcBuffer:
             self.offset += l
         return v
     
+    def readBuffer(self, l = 1):
+        return FurcBuffer(self.read(l))
+    
     def readUntil(self, seperator = b" "):
         data = b""
         while not self.eof:

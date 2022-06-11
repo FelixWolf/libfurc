@@ -26,7 +26,7 @@ class Colors:
         return self
     
     @classmethod
-    def fromStream(cls, data):
+    def fromStream(cls, data, readAvatar = True):
         version = data.read(1)[0]
         self = cls(version)
         if version == 116: #t
@@ -116,7 +116,7 @@ class Colors:
             if data.remaining >= 1:
                 self.species = data.read220()
             
-            if data.remaining >= 2:
+            if data.remaining >= 2 and readAvatar:
                 self.avatar = data.read220(2)
             
         else:
