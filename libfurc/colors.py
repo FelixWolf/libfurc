@@ -19,6 +19,23 @@ class Colors:
         self.species = None
         self.avatar = None
     
+    def __repr__(self):
+        values = ("F: {}; M: {}; E: {}; Ba: {}; V: {}; " \
+               + "Br: {}; C: {}; B: {}; T: {}; W: {}; " \
+               + "Ac: {}").format(
+                   self.fur, self.markings, self.hair, self.hair, self.eye,
+                   self.badge, self.vest, self.bracer, self.cape, self.boot,
+                   self.trousers, self.wings, self.accent
+                )
+        if self.gender:
+            values += "; G: {}".format(self.gender)
+        if self.species:
+            values += "; S: {}".format(self.species)
+        if self.avatar:
+            values += "; Av: {}".format(self.avatar)
+        
+        return "<Colors({}) {}>".format(self.version, values)
+    
     @classmethod
     def fromCode(cls, data):
         self = cls()
