@@ -5,6 +5,7 @@ import time
 import bz2
 import binascii
 import os
+from . import lzw
 
 #Filename, version, timestamp, filesize, crc32, compressionType
 sRCHBlock = struct.Struct("<40sIIIII")
@@ -29,7 +30,11 @@ class RCHBlock:
             return data
         
         if self.compressionType == 0:
-            raise NotImplementedError("XOR255 + LZW is not implemented!")
+            data = bytearray(data)
+            for i in range(len(data)):
+                data[i] = data[i] ^ 255
+            decomp = lzw.LzwDecompressor()
+            data = decomp.decompress(data)
         elif self.compressionType == 1:
             data = bytearray(data)
             for i in range(len(data)):
@@ -68,8 +73,10 @@ class RCHFile:
             return
         elif magic == b"FR01": #Load existing data
             version, timestamp = sRCHHeader.unpack(self.handle.read(sRCHHeader.size))
-            if version != 1:
-                raise ValueError("Don't know how to read RCH version {}".format(version))
+            #Disabled this check because it'll always be the same thing
+            #but the installer has different values.
+            #if version != 1:
+            #    raise ValueError("Don't know how to read RCH version {}".format(version))
         else:
             raise ValueError("Not a valid RCH archive!")
         
