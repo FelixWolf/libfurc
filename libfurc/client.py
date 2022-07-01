@@ -477,16 +477,16 @@ class PacketHooks(DefaultPacketHandler):
     #"]#" - Dialog
     async def message_61_3(self, opcode, data):
         msg = FurcBuffer(data)
-        diagID = msg.readUntil().decode()
+        dialogID = msg.readUntil().decode()
         
-        if diagID == "xxxx":
-            diagID = -1
+        if dialogID == "xxxx":
+            dialogID = -1
         else:
-            diagID = int(diagID)
+            dialogID = int(dialogID)
         
         dialogType = int(msg.readUntil())
         dialogMessage = msg.read()
-        await self.fire("Dialog", diagID, diagType, diagMessage)
+        await self.fire("Dialog", dialogID, dialogType, dialogMessage)
     
     #"]$" - Open URL
     async def message_61_4(self, opcode, data):
