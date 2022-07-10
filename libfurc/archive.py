@@ -5,7 +5,7 @@ import time
 import bz2
 import binascii
 import os
-from . import lzw
+#from . import lzw
 
 #Filename, version, timestamp, filesize, crc32, compressionType
 sRCHBlock = struct.Struct("<40sIIIII")
@@ -33,6 +33,7 @@ class RCHBlock:
             data = bytearray(data)
             for i in range(len(data)):
                 data[i] = data[i] ^ 255
+            raise NotImplementedError("LZW is not implemented at the moment!")
             decomp = lzw.LzwDecompressor()
             data = decomp.decompress(data)
         elif self.compressionType == 1:
