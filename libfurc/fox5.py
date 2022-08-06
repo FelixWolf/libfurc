@@ -59,7 +59,15 @@ class Fox5Image:
             data += bytes((pixel[3], pixel[0], pixel[1], pixel[2]))
         
         return cls(im.width, im.height, 1, data)
-
+    
+    def toPIL(self):
+        if self.format == 1:
+            data = b""
+            for pixel in range(0, len(self.data), 4):
+                data += bytes((self.data[pixel+3], self.data[pixel+0], self.data[pixel+1], self.data[pixel+2]))
+            return Image.frombytes('RGBA', (self.width, self.height), data)
+        elif self.format == 2:
+            return Image.frombytes('L', (self.width, self.height), self.data)
 
 sList = struct.Struct(">BI")
 sUInt8 = struct.Struct(">B")
@@ -325,7 +333,7 @@ class Fox5Object(Fox5List):
             return data
         
         if prop == "License":
-            data += b"L" + sUInt8.pack(self["License"])
+            data += b"l" + sUInt8.pack(self["License"])
             return data
         
         if prop == "Keywords":
@@ -388,7 +396,7 @@ class Fox5Object(Fox5List):
             
             return True
         
-        if char == b"L":
+        if char == b"l":
             self["License"], = sUInt8.unpack(handle.read(sUInt8.size))
             return True
         
@@ -403,13 +411,13 @@ class Fox5Object(Fox5List):
         
         if char == b"n":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
-            self["Name"], = handle.read(l).decode()
+            self["Name"] = handle.read(l).decode()
             
             return True
         
         if char == b"d":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
-            self["Description"], = handle.read(l).decode()
+            self["Description"] = handle.read(l).decode()
             
             return True
         
@@ -442,7 +450,7 @@ class Fox5Object(Fox5List):
             }
             return True
 
-class Fox5File(Fox5List):
+class Fox5Body(Fox5List):
     __level__ = 0
     __properties__ = ("ImageList", "Generator")
     __childtype__ = Fox5Object
@@ -477,9 +485,9 @@ class Fox5File(Fox5List):
             return True
 
 sFox5Footer = struct.Struct(">BBxxII8s")
-class Fox5(Fox5List):
+class Fox5File(Fox5List):
     __level__ = -1
-    __childtype__ = Fox5File
+    __childtype__ = Fox5Body
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -487,7 +495,7 @@ class Fox5(Fox5List):
         self.encryption = 0
     
     @property
-    def data(self):
+    def body(self):
         return self.children[0]
     
     @classmethod
@@ -514,7 +522,7 @@ class Fox5(Fox5List):
         if data.read(4) != b"\0\0\0\0":
             raise ValueError("Data header is incorrect!")
         
-        self = super(Fox5, cls).fromStream(data, handle)
+        self = super(Fox5File, cls).fromStream(data, handle)
         self.compression = compression
         self.encryption = encryption
         return self
@@ -525,8 +533,22 @@ class Fox5(Fox5List):
         data = Compress(data)
         compressedSize = len(data)
         
-        for image in self.data["ImageList"]:
+        for image in self.body["ImageList"]:
             data += image.compress()
         
         data += sFox5Footer.pack(self.compression, self.encryption, compressedSize, uncompressedSize, b"FOX5.1.1")
         return data
+
+def load(path):
+    with open(path, "rb") as f:
+        return Fox5File.fromStream(f)
+
+def loads(data):
+    return Fox5File.fromStream(io.BytesIO(data))
+
+def dump(fox, path):
+    with open(path, "wb") as f:
+        return f.write(bytes(fox))
+
+def dumps(fox):
+    return bytes(fox)
