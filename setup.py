@@ -23,6 +23,7 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: zlib/libpng License",
         "Topic :: Software Development :: Libraries"
     ]
 )
