@@ -1,3 +1,7 @@
+[![License](https://img.shields.io/pypi/l/libfurc.svg)](https://pypi.python.org/pypi/libfurc/)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/libfurc.svg)](https://pypi.python.org/pypi/libfurc/)
+
+
 LibFurc
 =======
 
