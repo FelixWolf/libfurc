@@ -345,13 +345,13 @@ class Fox5Object(Fox5List):
             return data
         
         if prop == "Name":
-            name = self["Name"][i].encode()
+            name = self["Name"].encode()
             data += b"n" + sUInt16.pack(len(name)) + name
             
             return data
         
         if prop == "Description":
-            name = self["Description"][i].encode()
+            name = self["Description"].encode()
             data += b"d" + sUInt16.pack(len(name)) + name
             
             return data
