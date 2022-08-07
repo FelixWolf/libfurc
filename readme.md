@@ -13,6 +13,7 @@ Features
 * Near complete support for all server to client messages
 * Some support for client to server messages
 * VXN support (Particles!)
+* Fox5 support
 
 Planned Features
 ================
@@ -21,7 +22,7 @@ Planned Features
 * Dream support
 * FSH support
 * FBJ support
-* Fox support
+* Legacy Fox support
 * PCX support (Although not furcadia specific, it'll be implemented)
 * DragonSpeak Compiler
 * DragonSpeak VM
