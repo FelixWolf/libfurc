@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-version = "0.1.1"
+version = "0.1.2"
 
 long_description = None
 with open("readme.md", "r") as f:

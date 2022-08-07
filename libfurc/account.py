@@ -7,6 +7,8 @@ import urllib.parse
 import urllib.error
 import xml.etree.ElementTree as ET
 
+LOGIN_SERVER = "https://charon.furcadia.com/accounts/clogin.php"
+
 class Costume:
     def __init__(self, character, id, name, ordinal = None, colors = None,
                  lastPortrait = 0, lastScale = 100, lastGloam = 0,
@@ -102,7 +104,6 @@ class Character:
             self.costumes.append(costume)
 
 class Account:
-    loginServer = "https://charon.furcadia.com/accounts/clogin.php"
     def __init__(self, username, password, id, email = None):
         self.username = username
         self.password = password
@@ -131,7 +132,7 @@ class Account:
         
         #TODO: Make this async
         req = urllib.request.Request(
-            loginServer or cls.loginServer,
+            loginServer or LOGIN_SERVER,
             data = data.encode(),
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded"
@@ -201,6 +202,6 @@ class Account:
                     self.addCharacter(char)
             
         except urllib.error.HTTPError as e:
-            raise exceptions.LoginError(e.read()) from None
+            raise LoginError(e.read()) from None
         
         return self
