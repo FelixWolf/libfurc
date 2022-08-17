@@ -355,7 +355,7 @@ class Fox5Object(Fox5List):
             return data
         
         if prop == "Portal":
-            name = self["Portal"][i].encode("iso-8859-1")
+            name = self["Portal"].encode("iso-8859-1")
             data += b"P" + sUInt16.pack(len(name)) + name
             return data
 
