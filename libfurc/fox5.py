@@ -3,9 +3,9 @@ try:
     from PIL import Image, ImageDraw, ImageOps
 except ModuleNotFoundError:
     pass
-import struct
-import lzma
 import io
+import lzma
+import struct
 
 sUInt64 = struct.Struct("<Q")
 def Compress(data):
@@ -202,11 +202,11 @@ class Fox5Sprite(Fox5List):
     
     def decodeProperty(self, char, handle):
         if char == b"C":
-            self["Purpose"], = sUInt16.unpack(handle.read(sInt16.size))
+            self["Purpose"], = sUInt16.unpack(handle.read(sUInt16.size))
             return True
         
         if char == b"c":
-            self["Image"], = sUInt16.unpack(handle.read(sInt16.size))
+            self["Image"], = sUInt16.unpack(handle.read(sUInt16.size))
             return True
         
         if char == b"O":
@@ -275,8 +275,7 @@ class Fox5Shape(Fox5List):
             data += b"K" + sUInt16.pack(len(self["KitterSpeak"]))
             for kline in self["KitterSpeak"]:
                 kline = (list(kline) + [0,0,0])[0:3]
-                data += sUInt16.pack(kline[0]) + sInt16.pack(kline[1]) + sInt16.pack(kline[2])
-            
+                data += sUInt16.pack(kline[0]) + sInt16.pack(kline[1]) + sInt16.pack(kline[2])           
             return data
     
     def decodeProperty(self, char, handle):
@@ -307,8 +306,7 @@ class Fox5Shape(Fox5List):
                     sUInt16.unpack(handle.read(sUInt16.size))[0],
                     sInt16.unpack(handle.read(sInt16.size))[0],
                     sInt16.unpack(handle.read(sInt16.size))[0],
-                ])
-            
+                ])           
             return True
 
 class Fox5Object(Fox5List):
@@ -321,7 +319,7 @@ class Fox5Object(Fox5List):
     def encodeProperty(self, prop):
         data = b""
         if prop == "Revisions":
-            data += b"R" + sUInt16.pack(self["Revisions"])
+            data += b"r" + sUInt16.pack(self["Revisions"])
             return data
         
         if prop == "Authors":
@@ -329,7 +327,6 @@ class Fox5Object(Fox5List):
             for i in range(len(self["Authors"])):
                 name = self["Authors"][i].encode()
                 data += sUInt16.pack(len(name)) + name
-            
             return data
         
         if prop == "License":
@@ -341,37 +338,33 @@ class Fox5Object(Fox5List):
             for i in range(len(self["Keywords"])):
                 name = self["Keywords"][i].encode()
                 data += sUInt16.pack(len(name)) + name
-            
             return data
         
         if prop == "Name":
             name = self["Name"].encode()
-            data += b"n" + sUInt16.pack(len(name)) + name
-            
+            data += b"n" + sUInt16.pack(len(name)) + name   
             return data
         
         if prop == "Description":
             name = self["Description"].encode()
-            data += b"d" + sUInt16.pack(len(name)) + name
-            
+            data += b"d" + sUInt16.pack(len(name)) + name    
             return data
         
         if prop == "Flags":
             data += b"!" + sUInt8.pack(self["Flags"])
             return data
         
+        if prop == "Portal":
+            name = self["Portal"][i].encode("iso-8859-1")
+            data += b"P" + sUInt16.pack(len(name)) + name
+            return data
+
         if prop == "MoreFlags":
             data += b"?" + sUInt32.pack(self["MoreFlags"])
             return data
         
-        if prop == "Portal":
-            name = self["Portal"][i].encode("iso-8859-1")
-            data += b"P" + sUInt16.pack(len(name)) + name
-            
-            return data
-        
         if prop == "ID":
-            data += b"i" + sUInt32.pack(self["ID"])
+            data += b"i" + sInt32.pack(self["ID"])
             return data
         
         if prop == "EditType":
@@ -393,7 +386,6 @@ class Fox5Object(Fox5List):
             for i in range(count):
                 l, = sUInt16.unpack(handle.read(sUInt16.size))
                 self["Authors"].append(handle.read(l).decode())
-            
             return True
         
         if char == b"l":
@@ -405,34 +397,30 @@ class Fox5Object(Fox5List):
             count, = sUInt16.unpack(handle.read(sUInt16.size))
             for i in range(count):
                 l, = sUInt16.unpack(handle.read(sUInt16.size))
-                self["Keywords"].append(handle.read(l).decode())
-            
+                self["Keywords"].append(handle.read(l).decode())  
             return True
         
         if char == b"n":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
             self["Name"] = handle.read(l).decode()
-            
             return True
         
         if char == b"d":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
-            self["Description"] = handle.read(l).decode()
-            
+            self["Description"] = handle.read(l).decode()          
             return True
         
         if char == b"!":
             self["Flags"], = sUInt8.unpack(handle.read(sUInt8.size))
             return True
         
-        if char == b"?":
-            self["MoreFlags"], = sUInt32.unpack(handle.read(sUInt32.size))
-            return True
-        
         if char == b"P":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
             self["Portal"] = handle.read(l).decode("iso-8859-1")
-            
+            return True
+
+        if char == b"?":
+            self["MoreFlags"], = sUInt32.unpack(handle.read(sUInt32.size))
             return True
         
         if char == b"i":
@@ -457,17 +445,22 @@ class Fox5Body(Fox5List):
     
     def encodeProperty(self, prop):
         data = b""
+
+        if prop == "Generator":
+            data += b"g" + sUInt8.pack(self["Generator"])
+            return data
+
         if prop == "ImageList":
             data += b"S" + sUInt32.pack(len(self["ImageList"]))
             for image in self["ImageList"]:
                 data += sImageList.pack(len(image.compress()), image.width, image.height, image.format)
             return data
         
-        if prop == "Generator":
-            data += b"g" + sUInt8.pack(self["Generator"])
-            return data
-        
     def decodeProperty(self, char, handle):
+        if char == b"g":
+            self["Generator"], = sUInt8.unpack(handle.read(sUInt8.size))
+            return True
+
         if char == b"S":
             self["ImageList"] = []
             
@@ -478,10 +471,6 @@ class Fox5Body(Fox5List):
                 compressedSize, width, height, fmt = sImageList.unpack(handle.read(sImageList.size))
                 im = Fox5Image(width, height, fmt, Decompress(foxhandle.read(compressedSize)))
                 self["ImageList"].append(im)
-            return True
-        
-        if char == b"g":
-            self["Generator"], = sUInt8.unpack(handle.read(sUInt8.size))
             return True
 
 sFox5Footer = struct.Struct(">BBxxII8s")
