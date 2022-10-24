@@ -93,13 +93,13 @@ class PacketHooks(DefaultPacketHandler):
                 val = msg.read95(3)
                 if val != 0x4000:
                     variables[offset] = val
-                    offset += 3
+                    offset += 1
                 else:
                     repeats = msg.read95(3) + 1
                     val = msg.read95(3)
                     for i in range(repeats):
                         variables[offset] = val
-                        offset += 3
+                        offset += 1
         await self.fire("UpdateVariables", variables)
     
     #"1" - Set floors
@@ -118,7 +118,7 @@ class PacketHooks(DefaultPacketHandler):
             
             result.append({
                 "pos": (x, y),
-                "floor": floorID,
+                "id": floorID,
                 "repeats": repeats
             })
         
@@ -140,7 +140,7 @@ class PacketHooks(DefaultPacketHandler):
             
             result.append({
                 "pos": (x, y),
-                "wall": wallID,
+                "id": wallID,
                 "repeats": repeats
             })
         await self.fire("SetWall", result)
@@ -164,7 +164,7 @@ class PacketHooks(DefaultPacketHandler):
             regionID = msg.read220(2)
             result.append({
                 "pos": (x, y),
-                "region": regionID
+                "id": regionID
             })
         await self.fire("SetRegion", result)
     
