@@ -3,29 +3,30 @@ try:
     from PIL import Image, ImageDraw, ImageOps
 except ModuleNotFoundError:
     pass
+
+try:
+    from libfurc.crypto.fox5 import Fox5Cipher
+    haveCrypto = True
+except ModuleNotFoundError:
+    haveCrypto = False
+
 import io
 import lzma
 import struct
+import random
 
 sUInt64 = struct.Struct("<Q")
 def Compress(data):
-    compressed = lzma.compress(data,
-        format=lzma.FORMAT_ALONE,
-        filters=[
-            {
-                'id': lzma.FILTER_LZMA1,
-                'mode': lzma.MODE_FAST,
-            }
-        ]
-    )
+    compressed = lzma.compress(data, format=lzma.FORMAT_ALONE)
         
     compressed = compressed[:5] + sUInt64.pack(len(data)) + compressed[13:]
     return compressed
 
 def Decompress(data):
-    return lzma.decompress(data,
-        format=lzma.FORMAT_ALONE
-    )
+    return lzma.decompress(data, format=lzma.FORMAT_ALONE)
+    
+class Fox5Error(Exception):
+    pass
 
 class Fox5Image:
     def __init__(self, width = 0, height = 0, format = 0, data = None):
@@ -37,6 +38,9 @@ class Fox5Image:
     
     def __repr__(self):
         return "<{} Width={}; Height={}; Format={}>".format(self.__class__.__name__, self.width, self.height, self.format)
+    
+    def __len__(self):
+        return len(self.__data__)
     
     @property
     def data(self):
@@ -102,7 +106,7 @@ class Fox5List(object):
         elif type(name) == str and name in self.__properties__:
             return self.properties[name]
         else:
-            raise ValueError("Unknown key {}".format(name))
+            raise Fox5Error("Unknown key {}".format(name))
     
     def __setitem__(self, name, value):
         if type(name) == int:
@@ -112,7 +116,7 @@ class Fox5List(object):
             self.properties[name] = value
         
         else:
-            raise ValueError("Unknown key {}".format(name))
+            raise Fox5Error("Unknown key {}".format(name))
     
     def __delitem__(self, name):
         if type(name) == int:
@@ -122,7 +126,7 @@ class Fox5List(object):
             self.properties.pop(name)
         
         else:
-            raise ValueError("Unknown key {}".format(name))
+            raise Fox5Error("Unknown key {}".format(name))
     
     def append(self, value):
         self.children.append(value)
@@ -134,8 +138,8 @@ class Fox5List(object):
         return False
     
     @classmethod
-    def fromStream(cls, handle, parent = None):
-        self = cls(parent)
+    def fromStream(cls, handle, *args, **kwargs):
+        self = cls(*args, **kwargs)
         char = True
         while True:
             char = handle.read(1)
@@ -147,21 +151,21 @@ class Fox5List(object):
             
             elif char == b"L":
                 if self.__childtype__ == None:
-                    raise ValueError("Unexpected list!")
+                    raise Fox5Error("Unexpected list!")
                 
                 level, count = sList.unpack(handle.read(sList.size))
                 
                 if level != self.__childtype__.__level__:
-                    raise ValueError("Invalid level encountered!")
+                    raise Fox5Error("Invalid level encountered!")
                 
                 for i in range(count):
                     self.children.append(self.__childtype__.fromStream(handle, self))
                 
                 if i+1 != count:
-                    raise ValueError("Unexpected end of list!")
+                    raise Fox5Error("Unexpected end of list!")
                 
             elif not self.decodeProperty(char, handle):
-                    raise ValueError("Unhandled attribute {}".format(char))
+                    raise Fox5Error("Unhandled attribute {}".format(char))
         return self
     
     def __bytes__(self):
@@ -170,7 +174,7 @@ class Fox5List(object):
             if prop in self.properties and self.properties[prop] != None:
                 encoded = self.encodeProperty(prop)
                 if type(encoded) != bytes:
-                    raise ValueError("Unhandled attribute {}".format(prop))
+                    raise Fox5Error("Unhandled attribute {}".format(prop))
                 data += encoded
         
         if self.__childtype__ != None:
@@ -275,7 +279,7 @@ class Fox5Shape(Fox5List):
             data += b"K" + sUInt16.pack(len(self["KitterSpeak"]))
             for kline in self["KitterSpeak"]:
                 kline = (list(kline) + [0,0,0])[0:3]
-                data += sUInt16.pack(kline[0]) + sInt16.pack(kline[1]) + sInt16.pack(kline[2])           
+                data += sUInt16.pack(kline[0]) + sInt16.pack(kline[1]) + sInt16.pack(kline[2])
             return data
     
     def decodeProperty(self, char, handle):
@@ -306,7 +310,7 @@ class Fox5Shape(Fox5List):
                     sUInt16.unpack(handle.read(sUInt16.size))[0],
                     sInt16.unpack(handle.read(sInt16.size))[0],
                     sInt16.unpack(handle.read(sInt16.size))[0],
-                ])           
+                ])
             return True
 
 class Fox5Object(Fox5List):
@@ -347,7 +351,7 @@ class Fox5Object(Fox5List):
         
         if prop == "Description":
             name = self["Description"].encode()
-            data += b"d" + sUInt16.pack(len(name)) + name    
+            data += b"d" + sUInt16.pack(len(name)) + name
             return data
         
         if prop == "Flags":
@@ -397,7 +401,7 @@ class Fox5Object(Fox5List):
             count, = sUInt16.unpack(handle.read(sUInt16.size))
             for i in range(count):
                 l, = sUInt16.unpack(handle.read(sUInt16.size))
-                self["Keywords"].append(handle.read(l).decode())  
+                self["Keywords"].append(handle.read(l).decode())
             return True
         
         if char == b"n":
@@ -407,7 +411,7 @@ class Fox5Object(Fox5List):
         
         if char == b"d":
             l, = sUInt16.unpack(handle.read(sUInt16.size))
-            self["Description"] = handle.read(l).decode()          
+            self["Description"] = handle.read(l).decode()
             return True
         
         if char == b"!":
@@ -454,6 +458,7 @@ class Fox5Body(Fox5List):
             data += b"S" + sUInt32.pack(len(self["ImageList"]))
             for image in self["ImageList"]:
                 data += sImageList.pack(len(image.compress()), image.width, image.height, image.format)
+                #Encryption is handled in Fox5File
             return data
         
     def decodeProperty(self, char, handle):
@@ -469,7 +474,14 @@ class Fox5Body(Fox5List):
             count, = sUInt32.unpack(handle.read(sUInt32.size))
             for count in range(count):
                 compressedSize, width, height, fmt = sImageList.unpack(handle.read(sImageList.size))
-                im = Fox5Image(width, height, fmt, Decompress(foxhandle.read(compressedSize)))
+                data = foxhandle.read(compressedSize)
+                
+                #Decrypt if needed
+                if self.parent.encryption == 1:
+                    uncompressedSize = width * height * (4 if fmt == 1 else 1)
+                    data = Fox5Cipher(data, uncompressedSize, self.parent.seed)
+                
+                im = Fox5Image(width, height, fmt, Decompress(data))
                 self["ImageList"].append(im)
             return True
 
@@ -478,10 +490,11 @@ class Fox5File(Fox5List):
     __level__ = -1
     __childtype__ = Fox5Body
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, compression = 2, encryption = 0, seed = None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.compression = 2
-        self.encryption = 0
+        self.compression = compression
+        self.encryption = encryption
+        self.seed = seed
     
     @property
     def body(self):
@@ -491,39 +504,66 @@ class Fox5File(Fox5List):
     def fromStream(cls, handle):
         handle.seek(-8, 2)
         if handle.read(4) != b"FOX5":
-            raise ValueError("Not a Fox5 File!")
+            raise Fox5Error("Not a Fox5 File!")
         
         if handle.read(4) != b".1.1":
-            raise ValueError("Fox5 file, but no idea what version it is!")
+            raise Fox5Error("Fox5 file, but no idea what version it is!")
         
         handle.seek(-20, 2)
         compression, encryption, dataCompressedSize, \
             dataUncompressedSize, magic = sFox5Footer.unpack(handle.read(sFox5Footer.size))
         
+        if encryption == 1:
+            if haveCrypto == False:
+                #Only need to check for this once, it won't magically appear.
+                raise Fox5Error("Can't decrypt without libfurc.crypto!")
+            handle.seek(-36, 2)
+            seed = handle.read(16)
+        
         handle.seek(0)
         data = handle.read(dataCompressedSize)
+        
+        if encryption == 1:
+            data = Fox5Cipher(data, dataUncompressedSize, seed)
+        
         data = Decompress(data)
         
         if len(data) != dataUncompressedSize:
-            raise ValueError("Uncompressed size does not equal decompressed size!")
+            raise Fox5Error("Uncompressed size does not equal decompressed size!")
         
         data = io.BytesIO(data)
         if data.read(4) != b"\0\0\0\0":
-            raise ValueError("Data header is incorrect!")
+            raise Fox5Error("Data header is incorrect!")
         
-        self = super(Fox5File, cls).fromStream(data, handle)
-        self.compression = compression
-        self.encryption = encryption
+        #This is actually calling the Fox5List
+        self = super(Fox5File, cls).fromStream(data, handle, compression = compression, encryption = encryption, seed = seed)
         return self
     
     def __bytes__(self):
+        if self.encryption == 1:
+            if haveCrypto == False:
+                #Only need to check for this once, it won't magically appear.
+                raise Fox5Error("Can't encrypt without libfurc.crypto!")
+            if self.seed == None:
+                seed = random.randbytes(16)
+        
         data = b"\0\0\0\0" + super().__bytes__()
         uncompressedSize = len(data)
         data = Compress(data)
         compressedSize = len(data)
         
+        if self.encryption == 1:
+            data = Fox5Cipher(data, uncompressedSize, self.seed)
+        
         for image in self.body["ImageList"]:
-            data += image.compress()
+            if self.encryption == 1:
+                data += Fox5Cipher(image.compress(), len(image), self.seed)
+                
+            else:
+                data += image.compress()
+        
+        if self.encryption == 1:
+            data += self.seed
         
         data += sFox5Footer.pack(self.compression, self.encryption, compressedSize, uncompressedSize, b"FOX5.1.1")
         return data
