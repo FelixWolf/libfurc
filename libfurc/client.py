@@ -1063,26 +1063,35 @@ class PacketHooks(DefaultPacketHandler):
     
     async def handlePacket(self, data):
         await self.fire("Raw", data)
-        await getattr(
-            self,
-            "message_" + str(data[0]-32),
-            self.message_unhandled
-        )(data[0]-32, data[1:])
+        try:
+            await getattr(
+                self,
+                "message_" + str(data[0]-32),
+                self.message_unhandled
+            )(data[0]-32, data[1:])
+        except ValueError as e:
+            print("DECODE FAILED ")
 
 #Outgoing message definitions
 class Commands:
-    def login(self, character):
+    def login(self, character, machineid = None):
+        if machineid == None:
+            machineid = ""
+        else:
+            machineid = " "+machineid
         if character.type == character.TYPE_INI:
-            return self.command("connect {} {}".format(
+            return self.command("connect {} {}{}".format(
                 character.name,
-                character.password
+                character.password,
+                machineid
             ))
         
         elif character.type == character.TYPE_ACCOUNT:
-            return self.command("account {} {} {}".format(
+            return self.command("account {} {} {}{}".format(
                 character.account.username,
                 character.name,
-                character.account.password
+                character.account.password,
+                machineid
             ))
     
     def move(self, direction):
@@ -1171,8 +1180,8 @@ class Client(PacketHooks, Commands):
             data = data.encode()
         return self.send(data + b"\n")
     
-    def handlePacket(self, data):
-        pass
+    #async def handlePacket(self, data):
+    #    pass
     
     @property
     def connected(self):
