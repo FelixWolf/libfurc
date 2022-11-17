@@ -1,6 +1,5 @@
 from distutils.core import setup
-
-version = "0.1.2"
+from libfurc import __version__ as version
 
 long_description = None
 with open("readme.md", "r") as f:
