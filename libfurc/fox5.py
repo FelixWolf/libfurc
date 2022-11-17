@@ -519,6 +519,8 @@ class Fox5File(Fox5List):
                 raise Fox5Error("Can't decrypt without libfurc.crypto!")
             handle.seek(-36, 2)
             seed = handle.read(16)
+        else:
+            seed = None
         
         handle.seek(0)
         data = handle.read(dataCompressedSize)

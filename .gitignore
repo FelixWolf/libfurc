@@ -126,3 +126,4 @@ dmypy.json
 #Project
 libfurc/crypto
 libfurc/crypto/
+examples/accounts.txt
