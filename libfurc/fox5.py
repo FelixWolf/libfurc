@@ -29,12 +29,12 @@ class Fox5Error(Exception):
     pass
 
 class Fox5Image:
-    def __init__(self, width = 0, height = 0, format = 0, data = None):
+    def __init__(self, width = 0, height = 0, format = 0, data = None, compressed = False):
         self.width = width
         self.height = height
         self.format = format
         self.__data__ = data
-        self.compressed = None
+        self.compressed = compressed
     
     def __repr__(self):
         return "<{} Width={}; Height={}; Format={}>".format(self.__class__.__name__, self.width, self.height, self.format)
@@ -48,13 +48,20 @@ class Fox5Image:
     
     @data.setter
     def data(self, value):
-        self.__data__ = data
-        self.compressed = None
+        self.__data__ = value
+        self.compressed = False
     
     def compress(self):
         if not self.compressed:
-            self.compressed = Compress(self.data)
-        return self.compressed
+            self.data = Compress(self.data)
+            self.compressed = True
+        return self.data
+    
+    def decompress(self):
+        if self.compressed:
+            self.data = Decompress(self.data)
+            self.compressed = False
+        return self.data
     
     @classmethod
     def fromPIL(cls, im):
@@ -62,9 +69,10 @@ class Fox5Image:
         for pixel in im.getdata():
             data += bytes((pixel[3], pixel[0], pixel[1], pixel[2]))
         
-        return cls(im.width, im.height, 1, data)
+        return cls(im.width, im.height, 1, data, False)
     
     def toPIL(self):
+        self.decompress()
         if self.format == 1:
             data = b""
             for pixel in range(0, len(self.data), 4):
@@ -481,7 +489,7 @@ class Fox5Body(Fox5List):
                     uncompressedSize = width * height * (4 if fmt == 1 else 1)
                     data = Fox5Cipher(data, uncompressedSize, self.parent.seed)
                 
-                im = Fox5Image(width, height, fmt, Decompress(data))
+                im = Fox5Image(width, height, fmt, data, True)
                 self["ImageList"].append(im)
             return True
 
