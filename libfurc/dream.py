@@ -52,16 +52,17 @@ DreamTypeCast = {
     'allowjs': bool,
     'allowlf': bool,
     'allowfurl': bool,
+    'allowshouts': bool,
+    'allowlarge': bool,
     'swearfilter': bool,
     'nowho': bool,
     'forcesittable': bool,
-    'allowshouts': bool,
-    'allowlarge': bool,
     'notab': bool,
     'nonovelty': bool,
     'rating': str,
     'allow32bitart': bool,
-    'ismodern': bool
+    'ismodern': bool,
+    'parentalcontrols': bool
 }
 
 class Dream:
@@ -108,12 +109,12 @@ class Dream:
         return (self.height * x) + y
     
     def __getitem__(self, key):
-        self.parameters[key]
+        self.properties[key]
 
     def __setitem__(self, key, value):
         if parameter.lower() not in DreamTypeCast:
-            raise ValueError("Unknown parameter {}".format(parameter))
-        self.parameters[key] = value
+            print("[WARN] Unknown dream parameter {}".format(parameter))
+        self.properties[key] = value
     
     @property
     def width(self):
