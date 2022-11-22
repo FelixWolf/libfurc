@@ -13,7 +13,7 @@ patchIndices = {
         ("items.fox", 0, 1799),
         ("portals.fox", 1800, 1999),
         ("portalse.fox", 2000, 2399),
-        ("iteme.fox", 2400, 2399)
+        ("iteme.fox", 2400, 3399)
     ],
     "floors": [
         ("floors.fox", 0, 499),
