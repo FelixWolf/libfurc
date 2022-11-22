@@ -74,10 +74,7 @@ class Fox5Image:
     def toPIL(self):
         self.decompress()
         if self.format == 1:
-            data = b""
-            for pixel in range(0, len(self.data), 4):
-                data += bytes((self.data[pixel+1], self.data[pixel+2], self.data[pixel+3], self.data[pixel]))
-            return Image.frombytes('RGBA', (self.width, self.height), data)
+            return Image.frombytes('RGBA', (self.width, self.height), self.data, "raw", "ARGB")
         elif self.format == 2:
             return Image.frombytes('L', (self.width, self.height), self.data)
 
