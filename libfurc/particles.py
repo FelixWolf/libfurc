@@ -2,6 +2,27 @@
 import struct
 from . import base
 
+particleAttributeMetadata = {
+    1: {
+        "size": 52,
+        "names": {
+            0: "delay",
+            2: "stime",
+            3: "ptime",
+            4: "count"
+        }
+    },
+    2: {
+        "size": 45,
+        "names": {
+            0: "delay",
+            2: "stime",
+            3: "ptime",
+            4: "count"
+        }
+    }
+}
+        
 class ParticleSource:
     def __init__(self, version, pType):
         self.version = version
@@ -19,6 +40,108 @@ class Particles:
     
     def __repr__(self):
         return "<Particles {} flags=0x{:x} sources={}>".format(self.version, self.flags, len(self.sources))
+    
+    @classmethod
+    def loadsTxt(cls, data):
+        lines = data.splitlines()
+        if lines[0] != "HORUS VXN TEXT":
+            raise ValueError("Invalid VXN text file!")
+        
+        i = 1
+        loaded = {}
+        stack = [loaded]
+        while i < len(lines):
+            #Remove comments, starting and ending spaces, newlines, etc
+            line = [x.lower() for x in lines[i].split("#")[0].strip().split(" ")]
+            
+            #Skip if empty
+            if len(line) == 0:
+                i += 1
+                continue
+            
+            if line[0] == "start":
+                if len(line) == 2:
+                    if line[1] in stack[-1]:
+                        raise ValueError("Key {} already exists!".format(line[1]))
+                    
+                    d = {}
+                    stack[-1][line[1]] = d
+                    stack.append(line[1])
+                    stack.append(d)
+                
+                elif len(line) == 3:
+                    if line[1] not in stack[-1]:
+                        stack[-1][line[1]] = []
+                    
+                    if type(stack[-1][line[1]]) != list:
+                        raise ValueError("Key {} already exists!".format(line[1]))
+                    
+                    #Resize as nessassery
+                    count = int(line[2])
+                    while len(stack[-1][line[1]]) <= count:
+                        stack[-1][line[1]].append(None)
+                    
+                    d = {}
+                    stack[-1][line[1]][count] = d
+                    stack.append(line[1])
+                    stack.append(d)
+                
+            elif line[0] == "end":
+                d = stack.pop()
+                name = stack.pop()
+                if name != line[1]:
+                    raise ValueError("Expected end to {}, got {}!".format(name, line[1]))
+            
+            else:
+                if line[0] in stack[-1]:
+                    raise ValueError("Key {} already exists!".format(line[0]))
+                stack[-1][line[0]] = line[1]
+            
+            i += 1
+        
+        if "version" not in loaded:
+            raise ValueError("Missing attribute version!")
+        
+        if "flags" not in loaded:
+            raise ValueError("Missing attribute flags!")
+        
+        if loaded["flags"].startswith("0b"):
+            loaded["flags"] = int(loaded["flags"], 16)
+        
+        result = cls(int(loaded["version"]), int(loaded["flags"]))
+        
+        for source in loaded["sources"]["source"]:
+            if "version" not in source:
+                raise ValueError("Missing attribute source.version!")
+            
+            if "type" not in source:
+                raise ValueError("Missing attribute source.type!")
+            
+            source["type"] = int(source["type"])
+            
+            pSource = ParticleSource(int(source["version"]), source["type"])
+            
+            #Prefill
+            pSource.attributes = [0] * particleAttributeMetadata[source["type"]]["size"]
+            
+            for i in range(len(pSource.attributes)):
+                name = "attr{}".format(i)
+                
+                #Resolve name if we have it
+                if i in particleAttributeMetadata[source["type"]]["names"]:
+                    tname = particleAttributeMetadata[source["type"]]["names"][i]
+                    if tname in source["attributes"]:
+                        name = tname
+                        
+                #Type cast
+                if "." in source["attributes"][name]:
+                    pSource.attributes[i] = float(source["attributes"][name])
+                else:
+                    pSource.attributes[i] = int(source["attributes"][name])
+            
+            result.sources.append(pSource)
+        
+        return result
     
     @classmethod
     def loadsVXN(cls, data):
@@ -215,8 +338,7 @@ class Particles:
                 sourceData += list(struct.pack("<4d", *source.attributes[offset:offset+4]))
                 offset += 4
             
-            sourceData += list(struct.pack("<28di", *source.attributes[offset:offset+30]))
-            
+            sourceData += list(struct.pack("<28dii", *source.attributes[offset:offset+30]))
             for byte in sourceData:
                 data += base.b220encode(byte, 2)
         
