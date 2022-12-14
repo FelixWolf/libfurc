@@ -20,6 +20,8 @@ class DreamVisit:
         self.patch = None
         self.checksum = None
         self.mapfile = None
+        self.tribble = -1
+        self.entryPos = [0,0]
     
     def toDict(self):
         return {
@@ -32,7 +34,11 @@ class DreamVisit:
             "entryText": self.entryText,
             "standard": self.standard,
             "patch": self.patch,
-            "checksum": self.checksum
+            "checksum": self.checksum,
+            "tribble": self.tribble,
+            "mapfile": self.mapfile,
+            "parentTribble": -1 if self.parent == None else self.parent.tribble,
+            "entryPos": self.entryPos
         }
     
     def getHash(self):
@@ -58,7 +64,7 @@ class DreamVisit:
         return hashlib.md5("".join(hashtable).encode()).hexdigest()
     
     def __str__(self):
-        return "furc://{}{}/ gomap {} standard {}".format(self.owner, ":"+self.name if self.name != "|" and self.name != None else "", self.gomap, self.standard)
+        return "furc://{}{}/ gomap {} standard {} on tribble {}".format(self.owner, ":"+self.name if self.name != "|" and self.name != None else "", self.gomap, self.standard, self.tribble)
 
 class Bot:
     def __init__(self, name, data = None, visited = None, toVisit = None, onVisit = None):
@@ -83,6 +89,7 @@ class Bot:
         self.client.hook("Text", self.Text)
         self.client.hook("DreamOwner", self.DreamOwner)
         self.client.hook("LoadMap", self.LoadMap)
+        self.client.hook("MoveCamera", self.MoveCamera)
 
     async def timer(self):
         while self.client.connected:
@@ -96,7 +103,7 @@ class Bot:
             await asyncio.sleep(2)
         
         if len(self.toVisit) <= 0:
-            self.client.disconnect()
+            await self.client.disconnect()
             return
         
         print(self.name, "Discovered", str(self.currentDream))
@@ -130,7 +137,12 @@ class Bot:
     async def Message(self, msg):
         if msg.startswith(b"<font color='emit'><img src='fsh://system.fsh:91' alt='@emit' /><channel name='@emit' />"):
             self.currentDream.entryText = msg.decode()
-            await self.visitNext()
+            self.shouldContinue = True #Say we have enough data
+        
+        if msg.startswith(b"<img src='fsh://system.fsh:86' /> You are connected to Heimdall "):
+            if self.currentDream.tribble == -1:
+                self.currentDream.tribble = int(msg.split(b" ")[-1])
+        
         if msg.startswith(b"<img src='fsh://system.fsh:86' /> Dream Standard: <a href='http://www.furcadia.com/standards/'>"):
             self.currentDream.standard = msg.split(b"<a href='http://www.furcadia.com/standards/'>")[1].split(b"</a>")[0].decode()
 
@@ -145,6 +157,7 @@ class Bot:
     async def Dream(self, patched, package, checksum, modern):
         self.timeSinceLast = time.time()
         if self.currentDream == None:
+            #No dream, skip immediately
             await self.visitNext()
         else:
             self.visited.append(self.currentDream)
@@ -153,7 +166,10 @@ class Bot:
             self.currentDream.ownerraw = self.dreamowner
             self.currentDream.mapfile = self.mapfile
             await self.client.vascodagama()
+            await asyncio.sleep(0.1)
             await self.client.command("dreambookmark 0")
+            await asyncio.sleep(0.1)
+            await self.client.command("which")
             self.currentDream.available = True
             self.dreamowner = None
             self.mapfile = None
@@ -167,6 +183,9 @@ class Bot:
         elif len(d) == 2:
             self.currentDream.owner = d[0]
             self.currentDream.name = d[1]
+        
+    async def MoveCamera(self, event):
+        self.currentDream.entryPos = event["to"]
 
     async def Text(self, pos, t, owner, name, maturity, gateType):
         visit = DreamVisit(owner.decode(), name.decode(), parent = self.currentDream)
@@ -184,6 +203,7 @@ class Bot:
 async def main():
     parser = argparse.ArgumentParser(description="Simple client test")
     parser.add_argument("-a", "--account", nargs="+", default=None, action='append', help="[<<username> <password> <character> [<character>...]>...]")
+    parser.add_argument("-i", "--id", default=None, help="Machine ID")
     args = parser.parse_args()
     if not args.account:
         print("Need account list!")
@@ -228,7 +248,7 @@ async def main():
             if not motd:
                 print("Failed to connect to {}".format(character.name))
                 continue
-            await client.login(character)
+            await client.login(character, args.id)
             clients.append(client)
         
         await asyncio.gather(*[client.run() for client in clients])
