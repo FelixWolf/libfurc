@@ -826,8 +826,15 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         
         #t is Type
-        #type 0 and 1 are unknown
+        #type 0 is invalid (?)
+        #type 1 is probably the loading screen
         #type 2 is normal mode
+        #type 3 is character creator (?)
+        #type 4, 5, 6, 7, 8 are related to the message center
+        #type 9 isn't implemented
+        #type 10 is the pink text box screen
+        #everything else isn't defined
+        
         t = msg.read(1)[0]
         if t > 96 and t < 123:
             t = t - 97
