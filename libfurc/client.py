@@ -1163,8 +1163,8 @@ class Client(PacketHooks, Commands):
         return None
     
     async def disconnect(self):
-        writer.close()
-        await writer.wait_closed()
+        self.writer.close()
+        await self.writer.wait_closed()
         self.reader = None
         self.writer = None
     
