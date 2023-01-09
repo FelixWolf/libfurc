@@ -910,12 +910,12 @@ class PacketHooks(DefaultPacketHandler):
             nameLength = msg.read220(1)
             name = msg.read(nameLength)
             bitpack = msg.read220(4)
-            canJoin = bitpack >> 7 & 1
+            canJoin = bitpack >> 7 & 1 == 1
             maturity = (bitpack >> 8 & 0xf) * 100
             peopleCount = bitpack >> 25 & 0x1f
-            canTell = bitpack & 0x4000
-            canListen = bitpack & 0x20000
-            canBroadcast = bitpack & 0x40000
+            canTell = bitpack & 0x4000 == 0x4000
+            canListen = bitpack & 0x20000 == 0x20000
+            canBroadcast = bitpack & 0x40000 == 0x40000
             channelImage = msg.read220(4)
             await self.fire("ChannelInfo", channelUpdateType == "@", name, maturity, peopleCount, canTell, canListen, canBroadcast, channelImage)
     
