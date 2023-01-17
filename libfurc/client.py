@@ -674,21 +674,18 @@ class PacketHooks(DefaultPacketHandler):
         while msg.remaining >= 12:
             fuid = msg.read220(4)
             
-            color = 0
+            r, g, b = 0, 0, 0
             
-            for i in range(6):
-                #I still don't fully understand this but this seems to work
-                color = color << 4
-                fragment = msg.read(1)[0]
-                if fragment >= 48 and fragment <= 57:
-                    color = color | (fragment & 15)
-                elif fragment >= 65 and fragment <= 70:
-                    color = color | (fragment - 75)
+            try:
+                #BGR encoding
+                b, g, r = bytes.fromHex(msg.read(6))
+            except ValueError:
+                pass #Just ignore it, it's malformed
             
-            intensity = msg.read220(2)
+            intensity = msg.read220(2) & 0xFF #0 to 254
             
             result[fuid] = {
-                "color": color,
+                "color": [r, g, b],
                 "intensity": intensity
             }
         
