@@ -8,11 +8,12 @@ import json
 import hashlib
 
 class DreamVisit:
-    def __init__(self, owner = None, name = None, parent = None, gomap = None):
+    def __init__(self, owner = None, name = None, parent = None, pos = None, gomap = None):
         self.owner = owner
         self.ownerraw = None
         self.name = name
         self.parent = parent
+        self.pos = pos or [0,0]
         self.gomap = gomap
         self.available = False
         self.entryText = None
@@ -37,6 +38,7 @@ class DreamVisit:
             "checksum": self.checksum,
             "tribble": self.tribble,
             "mapfile": self.mapfile,
+            "pos": self.pos,
             "parentTribble": -1 if self.parent == None else self.parent.tribble,
             "entryPos": self.entryPos
         }
@@ -188,7 +190,7 @@ class Bot:
         self.currentDream.entryPos = event["to"]
 
     async def Text(self, pos, t, owner, name, maturity, gateType):
-        visit = DreamVisit(owner.decode(), name.decode(), parent = self.currentDream)
+        visit = DreamVisit(owner.decode(), name.decode(), parent = self.currentDream, pos = pos)
         test = visit.getHash()
         for dream in self.visited:
             if dream.getHash() == test:
@@ -241,6 +243,7 @@ async def main():
         def onVisit(dream):
             if dream:
                 f.write(json.dumps(dream.toDict())+"\n")
+        
         for character in characters:
             print("Logging into {}".format(character.name))
             client = Bot(character.name, data, visited, toVisit, onVisit).client
