@@ -678,7 +678,7 @@ class PacketHooks(DefaultPacketHandler):
             
             try:
                 #BGR encoding
-                b, g, r = bytes.fromHex(msg.read(6))
+                b, g, r = bytes.fromhex(msg.read(6).decode())
             except ValueError:
                 pass #Just ignore it, it's malformed
             
@@ -925,6 +925,7 @@ class PacketHooks(DefaultPacketHandler):
     #"]q" - Load dream with custom patches
     async def message_61_81(self, opcode, data):
         msg = FurcBuffer(data)
+        msg.readUntil() #NOP
         patchName = msg.readUntil()
         crc32 = msg.readUntil()
         unk1 = msg.readUntil()
@@ -939,16 +940,10 @@ class PacketHooks(DefaultPacketHandler):
     #"]r" - Load dream with default patches
     async def message_61_82(self, opcode, data):
         msg = FurcBuffer(data)
+        msg.readUntil() #NOP
         patchName = msg.readUntil()
         crc32 = msg.readUntil()
-        unk1 = msg.readUntil()
-        unk2 = msg.readUntil()
-        modern = msg.readUntil()
-        if modern == "modern":
-            modern = True
-        else:
-            modern = False
-        await self.fire("Dream", False, patchName, crc32, modern)
+        await self.fire("Dream", False, patchName, crc32, False)
     
     #"]s" - Place text at location
     async def message_61_83(self, opcode, data):
