@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from .furcbuffer import FurcBuffer
 
 class Colors:
     def __init__(self, version = 116):
@@ -35,6 +36,89 @@ class Colors:
             values += "; Av: {}".format(self.avatar)
         
         return "<Colors({}) {}>".format(self.version, values)
+    
+    def toString(self, full = True, version = None):
+        version = version or self.version
+        
+        data = FurcBuffer()
+        
+        if version == 116: #t
+            data.write220(self.fur)
+            data.write220(self.markings)
+            data.write220(self.hair)
+            data.write220(self.eye)
+            data.write220(self.badge)
+            data.write220(self.vest)
+            data.write220(self.bracer)
+            data.write220(self.cape)
+            data.write220(self.boot)
+            data.write220(self.trousers)
+            
+            if full:
+                data.write220(self.gender or 0)
+                data.write220(self.species or 0)
+                data.write220(self.avatar or 0)
+            
+        elif version == 117: #u
+            #TODO: Implement this
+            #http://dev.furcadia.com/docs/new_color_code_format.pdf
+            if data.remaining < 2:
+                raise ValueError("Invalid color code length!")
+            
+            bitmask = (data.read220()&63) | (data.read220() << 6)
+            
+            for i in range(0, 10):
+                if bitmask >> i & 1:
+                    data.read(3)
+                else:
+                    data.read(1)
+            
+            if data.remaining >= 1:
+                self.gender = data.read220()
+            
+            if data.remaining >= 1:
+                self.species = data.read220()
+            
+            if data.remaining >= 1:
+                self.avatar = data.read220()
+        
+        elif version == 118: #v
+            #TODO: Implement this
+            #http://dev.furcadia.com/docs/new_color_code_format.pdf
+            if data.remaining < 27:
+                raise ValueError("Invalid color code length!")
+            
+            data.read(27) # 9 * 3
+            
+            if data.remaining >= 1:
+                self.gender = data.read220()
+            
+            if data.remaining >= 1:
+                self.species = data.read220()
+            
+            if data.remaining >= 1:
+                self.avatar = data.read220()
+        
+        elif version == 119: #w
+            data.write220(self.fur)
+            data.write220(self.markings)
+            data.write220(self.hair)
+            data.write220(self.eye)
+            data.write220(self.badge)
+            data.write220(self.vest)
+            data.write220(self.bracer)
+            data.write220(self.cape)
+            data.write220(self.boot)
+            data.write220(self.trousers)
+            data.write220(self.wings)
+            data.write220(self.accent)
+            
+            if full:
+                data.write220(self.gender or 0)
+                data.write220(self.species or 0)
+                data.write220(self.avatar or 0)
+        
+        return data
     
     @classmethod
     def fromCode(cls, data):
