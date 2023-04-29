@@ -742,34 +742,41 @@ class PacketHooks(DefaultPacketHandler):
         await self.fire("RegionSettings", result)
     
     #"]Z" - Art party(?)
-    #TODO: Implement
     async def message_61_58(self, opcode, data):
-        """
-            Format:
-                char[1] opcode # 0 - 7
-                
-            if opcode == 0: #End
-                #No params
+        msg = FurcBuffer(data)
+        cmd = int(msg.read(1))
+        if cmd == 0:
+            await self.fire("ArtPartyEnd")
+        
+        elif cmd == 2:
+            pixels = []
+            while len(pixels) < 32 and msg.remaining >= 6:
+                pxPosA = msg.read220(2)
+                pxPosB = msg.read220(2)
+                pixelColor = pxPosB & 0xFF
+                pixelPos = pxPosA + ((pxPosB >> 8) * 0x8000) - 256
+                unk = msg.read220(2)
+                pixels.append({
+                    "pixel": pixelPos,
+                    "color": pixelColor,
+                    "unk": unk,
+                    "x": pixelPos & 0xFF,
+                    "y": 0xFE - (pixelPos >> 8)
+                })
             
-            if opcode == 2: #Draw
-                #Probably base220 byte array
-            
-            if opcode == 3: #UNKNOWN
-                #unknown
-            
-            if opcode == 4: #Set shape
-                base220(4) shape
-                
-            if opcode == 5:
-                #unknown
-            
-            if opcode == 6: #Request data?
-                #no op
-            
-            if opcode == 7:
-                char(*) filename
-        """
-        pass
+            await self.fire("ArtPartyDraw", pixels)
+        
+        elif cmd == 4:
+            await self.fire("ArtPartySetShape", msg.read220(4))
+        
+        elif cmd == 6:
+            await self.fire("ArtPartyRequest")
+        
+        elif cmd == 7:
+            await self.fire("ArtPartyStart", msg.read())
+        
+        else:
+            logging.warn("Received unknown 61:58 (Art Party) request from server!")
     
     #"]]" - Login failure
     async def message_61_61(self, opcode, data):
