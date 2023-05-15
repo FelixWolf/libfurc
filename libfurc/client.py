@@ -531,39 +531,64 @@ class PacketHooks(DefaultPacketHandler):
         enabled = not bool(int(msg.read(1)))
         await self.fire("EnableUserList", enabled)
     
-    #"]?" - Unknown, something related to pounce
-    #FIXME: Figure out wtf this is
+    #"]?" - Pounce
     async def message_61_31(self, opcode, data):
-        """Seen values:
-            char[1] "I" - Clear(?) and jump to func1
-            char[1] "A" - jump to func1
-            char[1] "S" - jump to func2
-            char[1] "o" - jump to func3
+        msg = FurcBuffer(data)
+        subop = msg.read(1)
+        if subop == b"I":
+            await self.fire("PounceInit")
+            #print("Pounce Initialize")
+        
+        if subop == b"I" or subop == b"A":
+            pounceList = []
+            while msg.remaining > 23: #Must be greater than this due to string
+                """
+                    Flags:
+                        1 = isFriendRequest #If set, we can accept, otherwise we sent and are waiting
+                        2 = isFriends #Only set if both parties accepted
+                        4 = unknown
+                    if 1 and 2 are unset, then we sent the FR and they haven't accepted
+                    if 1 is set and 2 is unset, then they sent the FR and we haven't accepted
+                """
+                entry = {
+                    "character": msg.read220(4), #our FUID
+                    "fuid": msg.read220(4), #their FUID
+                    "status": msg.read(1), #+ = online, - = offline
+                    "unk4": datetime.datetime.fromtimestamp(msg.read220(4) + 1505145789), #Magic numbers yay!
+                    "unk5": datetime.datetime.fromtimestamp(msg.read220(4) + 1505145789),
+                    "unk6": datetime.datetime.fromtimestamp(msg.read220(4) + 1505145789),
+                    "flags": msg.read220(1),
+                    "name": msg.read(msg.read220(1))
+                }
+                pounceList.append(entry)
             
-            func1:
-                Base220(4) unk1
-                Base220(4) unk2
-                char[1] unk3 #flag?
-                Base220(4) unk4 #Time?
-                Base220(4) unk5 #Time?
-                Base220(4) unk6 #Time?
-                Base220(1) unk7
-                Base220(1) unk8
+            await self.fire("PounceList", pounceList)
+        
+        elif subop == "S": #No clue what this is
+            updateList = []
+            while msg.remaining >= 17: #Greater or equal to since no unknown length
+                entry = {
+                    "character": msg.read220(4), #our FUID
+                    "fuid": msg.read220(4), #their FUID
+                    "status": msg.read(1), #+ = online, - = offline
+                    "unk3": datetime.datetime.fromtimestamp(msg.read220(4) + 1505145789),
+                    "unk4": datetime.datetime.fromtimestamp(msg.read220(4) + 1505145789),
+                }
+                updateList.append(entry)
+        
+        elif subop == "o":
+            onlineList = []
+            while msg.remaining >= 5: #Greater or equal to since no unknown length
+                entry = {
+                    "fuid": msg.read220(4),
+                    "status": msg.read(1) #+ = online, - = offline
+                }
+                onlineList.append(entry)
             
-            func2:
-                while(remaining > 3)
-                    Base220(4) unk1
-                    Base220(4) unk2
-                    char[1] unk3
-                    Base220(4) unk4
-                    Base220(4) unk5
-            
-            func3:
-                Base220(4) unk1
-                char[1] flag - "+" or "-"
-        """
-        #await self.fire("SetUserID", int(data.decode()))
-    
+            await self.fire("PounceUpdate", onlineList)
+        
+        else:
+            logging.warn("Received unknown 61:31 (Pounce) request from server!")
     
     #"]A" - Download guild tag command (DEPRECATED?)
     async def message_61_33(self, opcode, data):
