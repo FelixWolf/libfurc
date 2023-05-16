@@ -371,9 +371,9 @@ class PacketHooks(DefaultPacketHandler):
         msg = FurcBuffer(data)
         furre = msg.read220(4)
         direction = msg.read220(1)
-        unk1 = msg.read220(1)
+        shape = msg.read220(1)
         colors = Colors.fromStream(msg)
-        await self.fire("SetAvatarColors", furre, direction, unk1, colors)
+        await self.fire("SetAvatarColors", furre, direction, shape, colors)
     
     #"C" - Hide avatar at position
     async def message_35(self, opcode, data):
