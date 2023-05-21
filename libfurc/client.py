@@ -665,6 +665,7 @@ class PacketHooks(DefaultPacketHandler):
         avatars = {}
         msg = FurcBuffer(data)
         dataVersion = msg.read220(1)
+        unk1 = msg.read(1)
         if dataVersion == 2:
             while msg.remaining >= 8:
                 avatarVersion = msg.read220(1)
