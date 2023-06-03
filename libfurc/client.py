@@ -83,7 +83,7 @@ class PacketHooks(DefaultPacketHandler):
         shape = msg.read220(1)
         await self.fire("AnimateAvatar", fuid, (x,y), direction, shape)
     
-    #"0" - Sync dream variables
+    #"0" - Set variables
     async def message_16(self, opcode, data):
         msg = FurcBuffer(data)
         variables = {}
@@ -100,7 +100,7 @@ class PacketHooks(DefaultPacketHandler):
                     for i in range(repeats):
                         variables[offset] = val
                         offset += 1
-        await self.fire("UpdateVariables", variables)
+        await self.fire("SetVariables", variables)
     
     #"1" - Set floors
     async def message_17(self, opcode, data):
@@ -145,14 +145,14 @@ class PacketHooks(DefaultPacketHandler):
             })
         await self.fire("SetWall", result)
     
-    #"3" - Set all DS variables
+    #"3" - Set DS Variable stack
     async def message_19(self, opcode, data):
         msg = FurcBuffer(data)
         vals = []
         while msg.remaining >= 3:
             var = msg.read95(3)
             vals.append(var)
-        await self.fire("SetVariables", vals)
+        await self.fire("DSVariableStack", vals)
     
     #"4" - Set region
     async def message_20(self, opcode, data):
