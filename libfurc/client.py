@@ -244,9 +244,17 @@ class PacketHooks(DefaultPacketHandler):
             saidNum = msg.read95(3)
         except ValueError:
             #TEMPORARY: Fix for server sending non-base95 numbers
+            msg.offset -= 3
+            print("INVALID saidNum", msg.read(3))
             saidNum = 0
         facingDir = msg.read95(1)
-        entryCode = msg.read95(3)
+        try:
+            entryCode = msg.read95(3)
+        except ValueError:
+            #TEMPORARY: Fix for server sending non-base95 numbers
+            msg.offset -= 3
+            print("INVALID entryCode", msg.read(3))
+            entryCode = 0
         objPaws =  msg.read95(3)
         furreCount = msg.read95(2)
         userID = msg.read95(6)
@@ -1102,7 +1110,7 @@ class PacketHooks(DefaultPacketHandler):
                 self.message_unhandled
             )(data[0]-32, data[1:])
         except ValueError as e:
-            print("DECODE FAILED ")
+            print("DECODE FAILED ", data)
 
 #Outgoing message definitions
 class Commands:
