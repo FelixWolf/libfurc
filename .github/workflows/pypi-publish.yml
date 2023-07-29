@@ -1,6 +1,12 @@
 name: PyPI Auto Publish
 
 on:
+  workflow_dispatch:
+    inputs:
+      testOnly:
+        description: 'Only publish to test.pypi.org'
+        required: false
+        type: boolean
   push:
     paths:
       - 'setup.py'
