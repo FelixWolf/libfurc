@@ -60,13 +60,27 @@ class Character:
         self.type = self.TYPE_INI
     
     @classmethod
-    def fromINI(self, name, colors = None, password = None, desc = None,
+    def fromINI(cls, name, colors = None, password = None, desc = None,
                 logins = 0, lastLogin = 0, autoResponse = None,
                 autoResponseMessage = None, AFKTime = None, AFKMessage = None,
                 AFKDescription = None, AFKPortrait = None,
                 DefaultPortrait = None, AFKDisconnectTime = None):
         self = cls()
         self.type = self.TYPE_INI
+        self.name = name
+        self.colors = colors
+        self.password = password
+        self.desc = desc
+        self.logins = logins
+        self.lastLogin = lastLogin
+        self.autoResponse = autoResponse
+        self.autoResponseMessage = autoResponseMessage
+        self.AFKTime = AFKTime
+        self.AFKMessage = AFKMessage
+        self.AFKDescription = AFKDescription
+        self.AFKPortrait = AFKPortrait
+        self.DefaultPortrait = DefaultPortrait
+        self.AFKDisconnectTime = AFKDisconnectTime
         return self
     
     @classmethod
