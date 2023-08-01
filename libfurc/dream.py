@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 import struct
+import io
+try:
+    import libfurc.crypto.generic
+    print(dir(libfurc.crypto.generic))
+    haveCrypto = True
+except ModuleNotFoundError:
+    haveCrypto = False
 
 class TileAccessor:
     def __init__(self, dream, target, walls = False):
@@ -148,7 +155,6 @@ class Dream:
             raise ValueError("Not a map file!")
         
         version = float(header[5:-9])
-        
         parameters = {}
         while True:
             param = b""
@@ -164,29 +170,58 @@ class Dream:
             key, value = param.decode().split("=", 1)
             parameters[key] = value
         
+        encrypted = haveCrypto and parameters.get("encoded", "0") == "1"
+        oldCrypto = version <= 1.10
+        if encrypted:
+            handle = io.BytesIO(libfurc.crypto.generic.decrypt(handle.read(), oldCrypto))
+        
         width, height = int(parameters["width"]), int(parameters["height"])
         
         dream = cls(**parameters, version = version)
-        for i in range(0, width*height):
-            dream._floors[i], = sUInt16.unpack(handle.read(2))
         
-        for i in range(0, width*height):
-            dream._items[i], = sUInt16.unpack(handle.read(2))
+        if encrypted:
+            dream._floors = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+        else:
+            for i in range(0, width*height):
+                dream._floors[i], = sUInt16.unpack(handle.read(2))
         
-        for i in range(0, width*height*2):
-            dream._walls[i], = sUInt8.unpack(handle.read(1))
+        if encrypted:
+            dream._items = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+        else:
+            for i in range(0, width*height):
+                dream._items[i], = sUInt16.unpack(handle.read(2))
+        
+        if encrypted:
+            dream._walls = libfurc.crypto.generic.readEncryptedDream8(handle, width, height, oldCrypto)
+        else:
+            for i in range(0, width*height*2):
+                dream._walls[i], = sUInt8.unpack(handle.read(1))
         
         if version > 1.30:
-            for i in range(0, width*height):
-                dream._regions[i], = sUInt16.unpack(handle.read(2))
-            for i in range(0, width*height):
-                dream._effects[i], = sUInt16.unpack(handle.read(2))
+            if encrypted:
+                dream._regions = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+            else:
+                for i in range(0, width*height):
+                    dream._regions[i], = sUInt16.unpack(handle.read(2))
+            
+            if encrypted:
+                dream._effects = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+            else:
+                for i in range(0, width*height):
+                    dream._effects[i], = sUInt16.unpack(handle.read(2))
         
         if version > 1.50:
-            for i in range(0, width*height):
-                dream._lighting[i], = sUInt16.unpack(handle.read(2))
-            for i in range(0, width*height):
-                dream._ambient[i], = sUInt16.unpack(handle.read(2))
+            if encrypted:
+                dream._lighting = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+            else:
+                for i in range(0, width*height):
+                    dream._lighting[i], = sUInt16.unpack(handle.read(2))
+            
+            if encrypted:
+                dream._ambient = libfurc.crypto.generic.readEncryptedDream16(handle, width, height, oldCrypto)
+            else:
+                for i in range(0, width*height):
+                    dream._ambient[i], = sUInt16.unpack(handle.read(2))
         
         return dream
 
