@@ -28,7 +28,7 @@ def Decompress(data):
         d = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE)
         return d.decompress(patched)
     else:
-        return data.decompress(data)
+        return lzma.decompress(data, format=lzma.FORMAT_ALONE)
     
 class Fox5Error(Exception):
     pass
