@@ -23,7 +23,12 @@ def Compress(data):
     return compressed
 
 def Decompress(data):
-    return lzma.decompress(data, format=lzma.FORMAT_ALONE)
+    if len(data) >= 13:
+        patched = data[:5] + (b"\xFF" * 8) + data[13:]
+        d = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE)
+        return d.decompress(patched)
+    else:
+        return data.decompress(data)
     
 class Fox5Error(Exception):
     pass
