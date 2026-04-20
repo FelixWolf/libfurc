@@ -1151,7 +1151,7 @@ class Commands:
         return self.command("\"" + message)
     
     def gomap(self, mapid):
-        return self.command("gomap " + encoding.b95encode(mapid))
+        return self.command("gomap " + base.b95encode(mapid))
     
     def fdl(self, url):
         return self.command("fdl "+url)
