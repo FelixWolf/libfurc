@@ -2,32 +2,232 @@
 import struct
 from . import base
 
-particleAttributeMetadata = {
-    1: {
-        "size": 52,
-        "names": {
-            0: "delay",
-            2: "stime",
-            3: "ptime",
-            4: "count"
-        }
-    },
-    2: {
-        "size": 45,
-        "names": {
-            0: "delay",
-            2: "stime",
-            3: "ptime",
-            4: "count"
-        }
-    }
-}
-        
+sInt32 = struct.Struct("<i")
+sUInt32 = struct.Struct("<I")
+sFloat64 = struct.Struct("<d")
+
 class ParticleSource:
-    def __init__(self, version, pType):
+    TYPE_UNSIGNED_INT = 0
+    TYPE_SIGNED_INT = 1
+    TYPE_FLOAT = 2
+
+    version = None
+    type = None
+
+    attributes = (
+    )
+
+    def __init__(self, version = 1):
         self.version = version
-        self.type = pType
-        self.attributes = []
+        self.particleVarianceStart = 0
+        self.endTimeMinRaw = 0
+        self.particleVarianceEnd = 0
+        self.endTimeMaxRaw = 0
+        self.particleCount = 0
+        self.unused1 = 0
+        self.centerPosX = 0
+        self.centerPosY = 0
+        self.effectLength = 0
+        self.centerRadiusMin = 0
+        self.centerRadiusMax = 0
+        self.colorAMinB = 0
+        self.colorAMinG = 0
+        self.colorAMinR = 0
+        self.colorAMaxB = 0
+        self.colorAMaxG = 0
+        self.colorAMaxR = 0
+        self.colorBMinB = 0
+        self.colorBMinG = 0
+        self.colorBMinR = 0
+        self.colorBMaxB = 0
+        self.colorBMaxG = 0
+        self.colorBMaxR = 0
+        self.colorCMinB = 0
+        self.colorCMinG = 0
+        self.colorCMinR = 0
+        self.colorCMaxB = 0
+        self.colorCMaxG = 0
+        self.colorCMaxR = 0
+        self.translucencyMinA = 0
+        self.translucencyMinB = 0
+        self.translucencyMinC = 0
+        self.translucencyMaxA = 0
+        self.translucencyMaxB = 0
+        self.translucencyMaxC = 0
+        self.motionBlurStepsMin = 0
+        self.motionBlurStepsMax = 0
+        self.motionBlurLengthMin = 0
+        self.motionBlurLengthMax = 0
+        self.shape = 0
+        self.unused2 = 0
+
+        self._attributeIndex = []
+        for attribute, t in self:
+            self._attributeIndex.append(attribute)
+    
+    def __iter__(self):
+        for attribute in self.attributes:
+            yield attribute
+    
+    def __getitem__(self, key):
+        if type(key) == int:
+            return getattr(self, self._attributeIndex[key])
+        elif type(key) == str:
+            if key not in self._attributeIndex:
+                raise KeyError("Unknown attribute {}!".format(key))
+            return getattr(self, key)
+        else:
+            raise KeyError("Invalid key type {}!".format(type(key)))
+    
+    def __setitem__(self, key, value):
+        if type(key) == int:
+            return setattr(self, self._attributeIndex[key], value)
+        elif type(key) == str:
+            if key not in self._attributeIndex:
+                raise KeyError("Unknown attribute {}!".format(key))
+            return setattr(self, key, value)
+        else:
+            raise KeyError("Invalid key type {}!".format(type(key)))
+    
+
+class ParticleBezier(ParticleSource):
+    version = 1
+    type = 1
+    attributes = (
+        ("particleVarianceStart", ParticleSource.TYPE_UNSIGNED_INT),
+        ("endTimeMinRaw", ParticleSource.TYPE_UNSIGNED_INT),
+        ("particleVarianceEnd", ParticleSource.TYPE_UNSIGNED_INT),
+        ("endTimeMaxRaw", ParticleSource.TYPE_UNSIGNED_INT),
+        ("particleCount", ParticleSource.TYPE_SIGNED_INT),
+        ("unused1", ParticleSource.TYPE_SIGNED_INT),
+        ("centerPosX", ParticleSource.TYPE_FLOAT),
+        ("centerPosY", ParticleSource.TYPE_FLOAT),
+        ("effectLength", ParticleSource.TYPE_FLOAT),
+        ("centerRadiusMin", ParticleSource.TYPE_FLOAT),
+        ("centerRadiusMax", ParticleSource.TYPE_FLOAT),
+        #
+        ("direction", ParticleSource.TYPE_SIGNED_INT),
+        ("unknown3", ParticleSource.TYPE_SIGNED_INT),
+        ("abMinWidth", ParticleSource.TYPE_FLOAT),
+        ("abMinHeight", ParticleSource.TYPE_FLOAT),
+        ("abMinUnused", ParticleSource.TYPE_FLOAT),
+        ("abMaxWidth", ParticleSource.TYPE_FLOAT),
+        ("abMaxHeight", ParticleSource.TYPE_FLOAT),
+        ("abMaxUnused", ParticleSource.TYPE_FLOAT),
+        ("bcMinWidth", ParticleSource.TYPE_FLOAT),
+        ("bcMinHeight", ParticleSource.TYPE_FLOAT),
+        ("bcMinUnused", ParticleSource.TYPE_FLOAT),
+        ("bcMaxWidth", ParticleSource.TYPE_FLOAT),
+        ("bcMaxHeight", ParticleSource.TYPE_FLOAT),
+        ("bcMaxUnused", ParticleSource.TYPE_FLOAT),
+        #
+        ("colorAMinB", ParticleSource.TYPE_FLOAT),
+        ("colorAMinG", ParticleSource.TYPE_FLOAT),
+        ("colorAMinR", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxR", ParticleSource.TYPE_FLOAT),
+        ("colorBMinB", ParticleSource.TYPE_FLOAT),
+        ("colorBMinG", ParticleSource.TYPE_FLOAT),
+        ("colorBMinR", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxR", ParticleSource.TYPE_FLOAT),
+        ("colorCMinB", ParticleSource.TYPE_FLOAT),
+        ("colorCMinG", ParticleSource.TYPE_FLOAT),
+        ("colorCMinR", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxR", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinA", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinB", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinC", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxA", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxB", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxC", ParticleSource.TYPE_FLOAT),
+        ("motionBlurStepsMin", ParticleSource.TYPE_FLOAT),
+        ("motionBlurStepsMax", ParticleSource.TYPE_FLOAT),
+        ("motionBlurLengthMin", ParticleSource.TYPE_FLOAT),
+        ("motionBlurLengthMax", ParticleSource.TYPE_FLOAT),
+        ("shape", ParticleSource.TYPE_SIGNED_INT),
+        ("unused2", ParticleSource.TYPE_SIGNED_INT)
+    )
+
+    def __init__(self, version):
+        super().__init__(version)
+        self.direction = 0
+        self.abMinWidth = 0
+        self.abMinHeight = 0
+        self.abMinUnused = 0
+        self.abMaxWidth = 0
+        self.abMaxHeight = 0
+        self.abMaxUnused = 0
+        self.bcMinWidth = 0
+        self.bcMinHeight = 0
+        self.bcMinUnused = 0
+        self.bcMaxWidth = 0
+        self.bcMaxHeight = 0
+        self.bcMaxUnused = 0
+
+class ParticleRay(ParticleSource):
+    version = 1
+    type = 2
+    attributes = (
+        ("particleVarianceStart", ParticleSource.TYPE_UNSIGNED_INT),
+        ("endTimeMinRaw", ParticleSource.TYPE_UNSIGNED_INT),
+        ("particleVarianceEnd", ParticleSource.TYPE_UNSIGNED_INT),
+        ("endTimeMaxRaw", ParticleSource.TYPE_UNSIGNED_INT),
+        ("particleCount", ParticleSource.TYPE_SIGNED_INT),
+        ("unused1", ParticleSource.TYPE_SIGNED_INT),
+        ("centerPosX", ParticleSource.TYPE_FLOAT),
+        ("centerPosY", ParticleSource.TYPE_FLOAT),
+        ("effectLength", ParticleSource.TYPE_FLOAT),
+        ("centerRadiusMin", ParticleSource.TYPE_FLOAT),
+        ("centerRadiusMax", ParticleSource.TYPE_FLOAT),
+        #
+        ("rayAngleMin", ParticleSource.TYPE_FLOAT),
+        ("rayAngleMax", ParticleSource.TYPE_FLOAT),
+        ("rayLengthMin", ParticleSource.TYPE_FLOAT),
+        ("rayLengthMax", ParticleSource.TYPE_FLOAT),
+        #
+        ("colorAMinB", ParticleSource.TYPE_FLOAT),
+        ("colorAMinG", ParticleSource.TYPE_FLOAT),
+        ("colorAMinR", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorAMaxR", ParticleSource.TYPE_FLOAT),
+        ("colorBMinB", ParticleSource.TYPE_FLOAT),
+        ("colorBMinG", ParticleSource.TYPE_FLOAT),
+        ("colorBMinR", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorBMaxR", ParticleSource.TYPE_FLOAT),
+        ("colorCMinB", ParticleSource.TYPE_FLOAT),
+        ("colorCMinG", ParticleSource.TYPE_FLOAT),
+        ("colorCMinR", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxB", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxG", ParticleSource.TYPE_FLOAT),
+        ("colorCMaxR", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinA", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinB", ParticleSource.TYPE_FLOAT),
+        ("translucencyMinC", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxA", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxB", ParticleSource.TYPE_FLOAT),
+        ("translucencyMaxC", ParticleSource.TYPE_FLOAT),
+        ("motionBlurStepsMin", ParticleSource.TYPE_FLOAT),
+        ("motionBlurStepsMax", ParticleSource.TYPE_FLOAT),
+        ("motionBlurLengthMin", ParticleSource.TYPE_FLOAT),
+        ("motionBlurLengthMax", ParticleSource.TYPE_FLOAT),
+        ("shape", ParticleSource.TYPE_SIGNED_INT),
+        ("unused2", ParticleSource.TYPE_SIGNED_INT)
+    )
+
+    def __init__(self, version):
+        super().__init__(version)
+        self.rayAngleMin = 0
+        self.rayAngleMax = 0
+        self.rayLengthMin = 0
+        self.rayLengthMax = 0
 
 class Particles:
     def __init__(self, version, flags):
@@ -42,9 +242,12 @@ class Particles:
         return "<Particles {} flags=0x{:x} sources={}>".format(self.version, self.flags, len(self.sources))
     
     @classmethod
-    def loadsTxt(cls, data):
+    def loadsVXT(cls, data):
+        if isinstance(data, (bytes, bytearray)):
+            data = data.decode()
+
         lines = data.splitlines()
-        if lines[0] != "HORUS VXN TEXT":
+        if len(lines) == 0 or lines[0].strip() != "HORUS VXN TEXT":
             raise ValueError("Invalid VXN text file!")
         
         i = 1
@@ -52,14 +255,15 @@ class Particles:
         stack = [loaded]
         while i < len(lines):
             #Remove comments, starting and ending spaces, newlines, etc
-            line = [x.lower() for x in lines[i].split("#")[0].strip().split(" ")]
+            raw = lines[i].split("#", 1)[0].strip()
+            line = raw.split()
             
             #Skip if empty
             if len(line) == 0:
                 i += 1
                 continue
             
-            if line[0] == "start":
+            if line[0].lower() == "start":
                 if len(line) == 2:
                     if line[1] in stack[-1]:
                         raise ValueError("Key {} already exists!".format(line[1]))
@@ -86,7 +290,7 @@ class Particles:
                     stack.append(line[1])
                     stack.append(d)
                 
-            elif line[0] == "end":
+            elif line[0].lower() == "end":
                 d = stack.pop()
                 name = stack.pop()
                 if name != line[1]:
@@ -106,38 +310,57 @@ class Particles:
             raise ValueError("Missing attribute flags!")
         
         if loaded["flags"].startswith("0b"):
-            loaded["flags"] = int(loaded["flags"], 16)
+            loaded["flags"] = int(loaded["flags"], 2)
         
         result = cls(int(loaded["version"]), int(loaded["flags"]))
         
-        for source in loaded["sources"]["source"]:
+        if "sources" not in loaded:
+            return result
+
+        source_container = loaded["sources"]
+        if "source" not in source_container:
+            return result
+
+        raw_sources = source_container["source"]
+        if type(raw_sources) != list:
+            raw_sources = [raw_sources]
+
+        for source in raw_sources:
+            if type(source) != dict:
+                raise ValueError("Invalid source block in text file!")
+
             if "version" not in source:
                 raise ValueError("Missing attribute source.version!")
             
             if "type" not in source:
                 raise ValueError("Missing attribute source.type!")
             
-            source["type"] = int(source["type"])
-            
-            pSource = ParticleSource(int(source["version"]), source["type"])
-            
-            #Prefill
-            pSource.attributes = [0] * particleAttributeMetadata[source["type"]]["size"]
-            
-            for i in range(len(pSource.attributes)):
-                name = "attr{}".format(i)
-                
-                #Resolve name if we have it
-                if i in particleAttributeMetadata[source["type"]]["names"]:
-                    tname = particleAttributeMetadata[source["type"]]["names"][i]
-                    if tname in source["attributes"]:
-                        name = tname
-                        
-                #Type cast
-                if "." in source["attributes"][name]:
-                    pSource.attributes[i] = float(source["attributes"][name])
+            source_type = int(source["type"], 0)
+            source_version = int(source["version"], 0)
+
+            if source_type == 1:
+                pSource = ParticleBezier(source_version)
+            elif source_type == 2:
+                pSource = ParticleRay(source_version)
+            else:
+                raise ValueError("Unknown source.type {}!".format(source_type))
+
+            attr_data = source.get("attributes", {})
+            if type(attr_data) != dict:
+                raise ValueError("Invalid source.attributes block!")
+
+            for idx, (name, t) in enumerate(pSource):
+                if name in attr_data:
+                    raw_value = attr_data[name]
                 else:
-                    pSource.attributes[i] = int(source["attributes"][name])
+                    continue
+
+                if t in (ParticleSource.TYPE_UNSIGNED_INT, ParticleSource.TYPE_SIGNED_INT):
+                    pSource[name] = int(raw_value, 0)
+                elif t == ParticleSource.TYPE_FLOAT:
+                    pSource[name] = float(raw_value)
+                else:
+                    raise ValueError("Unknown attribute type {}!".format(t))
             
             result.sources.append(pSource)
         
@@ -161,37 +384,43 @@ class Particles:
                 raise ValueError("Unexpected data in particle stream!")
             
             offset += 7
-            source = ParticleSource(version, pType)
-            
-            sdata = offset
-            
-            for p in struct.unpack_from("<4Iii5d", data, offset):
-                source.attributes.append(p)
-            
-            offset += 64
-            
+
             if pType == 1:
-                for p in struct.unpack_from("<i12d", data, offset):
-                    source.attributes.append(p)
-                offset += 100
+                source = ParticleBezier(version)
+                sourceDataLen = 400
             elif pType == 2:
-                for p in struct.unpack_from("<4d", data, offset):
-                    source.attributes.append(p)
-                offset += 32
+                source = ParticleRay(version)
+                sourceDataLen = 328
             else:
                 raise ValueError("Unknown particle type {}".format(pType))
-            
-            for p in struct.unpack_from("<28dii", data, offset):
-                source.attributes.append(p)
-            
-            offset += 232
+
+            if offset + sourceDataLen > len(data):
+                raise ValueError("Truncated particle source data!")
+
+            sourceData = data[offset:offset+sourceDataLen]
+            sourceOffset = 0
+
+            for attribute, t in source:
+                if t == ParticleSource.TYPE_UNSIGNED_INT:
+                    source[attribute] = sUInt32.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 4
+                elif t == ParticleSource.TYPE_SIGNED_INT:
+                    source[attribute] = sInt32.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 4
+                elif t == ParticleSource.TYPE_FLOAT:
+                    source[attribute] = sFloat64.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 8
+                else:
+                    raise ValueError("Unknown attribute type {}!".format(t))
+
+            offset += sourceDataLen
             
             result.sources.append(source)
             
         return result
     
     @classmethod
-    def loadsMessage(cls, data):
+    def loadsVXA(cls, data):
         offset = 0
         if data[:6] == b"VXNASC":
             offset = 6 #Raw, no offsets
@@ -231,29 +460,25 @@ class Particles:
             
             sourceData = bytes(sourceData)
             
-            source = ParticleSource(version, pType)
+            if pType == 1:
+                source = ParticleBezier(version)
+            elif pType == 2:
+                source = ParticleRay(version)
             
             sourceOffset = 0
-            
-            for p in struct.unpack_from("<4Iii5d", sourceData, sourceOffset):
-                source.attributes.append(p)
-            
-            sourceOffset += 64
-            
-            if pType == 1:
-                for p in struct.unpack_from("<i12d", sourceData, sourceOffset):
-                    source.attributes.append(p)
-                sourceOffset += 100
-            elif pType == 2:
-                for p in struct.unpack_from("<4d", sourceData, sourceOffset):
-                    source.attributes.append(p)
-                sourceOffset += 32
-            else:
-                raise ValueError("Unknown particle type {}".format(pType))
-            
-            for p in struct.unpack_from("<28dii", sourceData, sourceOffset):
-                source.attributes.append(p)
-            
+
+            for attribute, t in source:
+                if t == ParticleSource.TYPE_UNSIGNED_INT:
+                    source[attribute] = sUInt32.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 4
+                elif t == ParticleSource.TYPE_SIGNED_INT:
+                    source[attribute] = sInt32.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 4
+                elif t == ParticleSource.TYPE_FLOAT:
+                    source[attribute] = sFloat64.unpack_from(sourceData, sourceOffset)[0]
+                    sourceOffset += 8
+                else:
+                    raise ValueError("Unknown attribute type {}!".format(t))
             result.sources.append(source)
         
         return result
@@ -264,58 +489,64 @@ class Particles:
         
         for source in self.sources:
             data += struct.pack("<2sIB", b"m!", source.type, source.version)
-            data += struct.pack("<4Iii5d", *source.attributes[:11])
-            offset = 11
-            
+
+            sourceData = bytearray()
+            for attribute, t in source:
+                value = source[attribute]
+                if t == ParticleSource.TYPE_UNSIGNED_INT:
+                    sourceData += sUInt32.pack(value)
+                elif t == ParticleSource.TYPE_SIGNED_INT:
+                    sourceData += sInt32.pack(value)
+                elif t == ParticleSource.TYPE_FLOAT:
+                    sourceData += sFloat64.pack(value)
+                else:
+                    raise ValueError("Unknown attribute type {}!".format(t))
+
             if source.type == 1:
-                data += struct.pack("<i12d", *source.attributes[offset:offset+13])
-                offset += 13
-            
+                expected_len = 400
             elif source.type == 2:
-                data += struct.pack("<4d", *source.attributes[offset:offset+4])
-                offset += 4
-            
-            data += struct.pack("<28dii", *source.attributes[offset:offset+30])
+                expected_len = 328
+            else:
+                raise ValueError("Unknown source type {}!".format(source.type))
+
+            if len(sourceData) != expected_len:
+                raise ValueError(
+                    "Unexpected serialized source length {} for type {} (expected {})".format(
+                        len(sourceData), source.type, expected_len
+                    )
+                )
+
+            data += bytes(sourceData)
             
         return data
     
-    def dumpsTxt(self):
+    def dumpsVXT(self):
         data = "HORUS VXN TEXT\n"
         data += "version {}\n".format(self.version)
         data += "flags 0b{:0>32b}\n".format(self.flags)
         data += "start sources\n"
-        i = 0
         for source in self.sources:
-            data += "    start source {}\n".format(i)
+            data += "    start source\n"
             data += "        version {}\n".format(source.version)
             data += "        type {}\n".format(source.type)
             data += "        start attributes\n"
-            ii = 0
-            for attribute in source.attributes:
-                attrName = "attr{}".format(ii)
-                
-                #Resolve the name if we have it
-                if ii in particleAttributeMetadata[source.type]["names"]:
-                    attrName = particleAttributeMetadata[source.type]["names"][ii]
-                
-                if type(attribute) == int:
-                    data += "            {} {}\n".format(attrName, attribute)
-                elif type(attribute) == float:
-                    data += "            {} {}\n".format(attrName, attribute)
+            for attribute, t in source:
+                value = source[attribute]
+
+                if t in (ParticleSource.TYPE_UNSIGNED_INT, ParticleSource.TYPE_SIGNED_INT):
+                    data += "            {} {}\n".format(attribute, int(value))
+                elif t == ParticleSource.TYPE_FLOAT:
+                    data += "            {} {}\n".format(attribute, float(value))
                 else:
-                    print("Invalid attribute value!")
-                    return None
-                
-                ii += 1
+                    raise ValueError("Unknown attribute type {}!".format(t))
             
             data += "        end attributes\n"
             data += "    end source\n"
-            i += 1
         data += "end sources\n"
         
         return data.strip().encode()
     
-    def dumpsMessage(self):
+    def dumpsVXA(self):
         data = b"VXNASC" 
         
         data += base.b220encode(self.version, 1)
@@ -327,18 +558,32 @@ class Particles:
             data += base.b220encode(source.type, 4)
             data += base.b220encode(source.version, 1)
             
-            sourceData = list(struct.pack("<4Iii5d", *source.attributes[:11]))
-            offset = 11
-            
+            sourceData = bytearray()
+            for attribute, t in source:
+                value = source[attribute]
+                if t == ParticleSource.TYPE_UNSIGNED_INT:
+                    sourceData += sUInt32.pack(value)
+                elif t == ParticleSource.TYPE_SIGNED_INT:
+                    sourceData += sInt32.pack(value)
+                elif t == ParticleSource.TYPE_FLOAT:
+                    sourceData += sFloat64.pack(value)
+                else:
+                    raise ValueError("Unknown attribute type {}!".format(t))
+
             if source.type == 1:
-                sourceData += list(struct.pack("<i12d", *source.attributes[offset:offset+13]))
-                offset += 13
-            
+                expected_len = 400
             elif source.type == 2:
-                sourceData += list(struct.pack("<4d", *source.attributes[offset:offset+4]))
-                offset += 4
-            
-            sourceData += list(struct.pack("<28dii", *source.attributes[offset:offset+30]))
+                expected_len = 328
+            else:
+                raise ValueError("Unknown source type {}!".format(source.type))
+
+            if len(sourceData) != expected_len:
+                raise ValueError(
+                    "Unexpected serialized source length {} for type {} (expected {})".format(
+                        len(sourceData), source.type, expected_len
+                    )
+                )
+
             for byte in sourceData:
                 data += base.b220encode(byte, 2)
         
